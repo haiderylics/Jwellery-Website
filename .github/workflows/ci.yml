@@ -1,0 +1,100 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  backend-quality-and-security:
+    name: Backend Quality & Security Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          version: "latest"
+
+      - name: Set up Python 3.12
+        run: uv python install 3.12
+
+      - name: Synchronize locked dependencies
+        run: uv sync --frozen
+
+      - name: Ruff Linter Check
+        run: uv run ruff check .
+
+      - name: Ruff Formatter Check
+        run: uv run ruff format --check .
+
+      - name: Bandit Static Security Analysis
+        run: uv run bandit -r backend/ -x backend/tests
+
+      - name: Dependency Vulnerability Audit (pip-audit)
+        run: uv run pip-audit
+
+      - name: Django System Checks
+        run: uv run python backend/manage.py check
+
+      - name: Django Model Migration Drift Check
+        run: uv run python backend/manage.py makemigrations --check --dry-run
+
+      - name: Media Consistency Audit (Dry-Run)
+        run: uv run python backend/manage.py audit_media --dry-run
+
+      - name: Run Pytest Test Suite
+        run: uv run pytest
+
+  frontend-toolchain-check:
+    name: Frontend Toolchain, Typecheck & Production Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".node-version"
+
+      - name: Install Locked Frontend Dependencies (npm ci)
+        run: npm --prefix frontend ci
+
+      - name: Frontend TypeScript Typecheck
+        run: npm --prefix frontend run typecheck
+
+      - name: Frontend Production Bundle Build
+        run: npm --prefix frontend run build
+
+      - name: Frontend Security Audit
+        run: npm --prefix frontend audit
+
+  secret-scanning:
+    name: Repository Secret Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository with full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run TruffleHog Secret Scanner
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --only-verified

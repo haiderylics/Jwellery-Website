@@ -1,0 +1,21 @@
+{% extends "admin/login.html" %}
+{% load static %}
+
+{% block extrahead %}
+  {{ block.super }}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'admin/css/custom_admin.css' %}">
+{% endblock %}
+
+{% block branding %}
+<div class="login-brand-header">
+  <div class="brand-crest-large">
+    <span class="brand-monogram">Z</span>
+  </div>
+  <h1 class="login-brand-title">ZIRCONIA FINE JEWELS</h1>
+  <p class="login-brand-subtitle">Operations &amp; Merchandising Management</p>
+  <div class="login-gold-rule"></div>
+</div>
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('Jewellery Operations') }}{% endblock %}
+
+{% block extrahead %}
+  {{ block.super }}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'admin/css/custom_admin.css' %}">
+{% endblock %}
+
+{% block branding %}
+<div id="site-branding">
+  <div class="brand-crest">
+    <span class="brand-monogram">Z</span>
+  </div>
+  <div class="brand-titles">
+    <h1 id="site-name"><a href="{% url 'admin:index' %}">ZIRCONIA FINE JEWELS</a></h1>
+    <span class="site-subtag">Operations &amp; Merchandising Console</span>
+  </div>
+</div>
+{% endblock %}
+
+{% block nav-global %}
+<div class="header-quick-links">
+  <a href="http://localhost:5173" target="_blank" rel="noopener noreferrer" class="view-storefront-btn">
+    <span class="storefront-icon">&#8599;</span> View Live Storefront
+  </a>
+</div>
+{% endblock %}

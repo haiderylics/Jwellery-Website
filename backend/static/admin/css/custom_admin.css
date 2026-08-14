@@ -1,0 +1,554 @@
+/* ==============================================================================
+   ZIRCONIA FINE JEWELS — Custom Django Admin Luxury Styling
+   ============================================================================== */
+
+:root {
+  --color-obsidian: #0D0C0A;
+  --color-soft-black: #141414;
+  --color-card-bg: #181715;
+  --color-surface-hover: #22201C;
+  --color-border: #2E2B25;
+  --color-border-subtle: #22201C;
+  --color-gold: #C5A880;
+  --color-gold-hover: #D4AF37;
+  --color-gold-light: #E6D5B8;
+  --color-warm-white: #F9F6F0;
+  --color-muted: #9E988E;
+  --color-success: #43A047;
+  --color-warning: #FFA000;
+  --color-danger: #E53935;
+  --font-serif: 'Cinzel', Georgia, serif;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Global Reset & Typography */
+body {
+  background-color: var(--color-obsidian) !important;
+  color: var(--color-warm-white) !important;
+  font-family: var(--font-sans) !important;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+a:link, a:visited {
+  color: var(--color-gold) !important;
+  text-decoration: none;
+  transition: color 150ms ease;
+}
+
+a:hover, a:focus {
+  color: var(--color-gold-hover) !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Header & Brand Navigation                                                  */
+/* -------------------------------------------------------------------------- */
+
+#header {
+  background: linear-gradient(180deg, #161513 0%, var(--color-obsidian) 100%) !important;
+  color: var(--color-warm-white) !important;
+  border-bottom: 1px solid var(--color-gold) !important;
+  padding: 14px 28px !important;
+  display: flex !important;
+  justify-content: space-between;
+  align-items: center;
+}
+
+#site-branding {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.brand-crest {
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--color-gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle, #25221B 0%, #12110E 100%);
+  border-radius: 4px;
+}
+
+.brand-monogram {
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-gold);
+  line-height: 1;
+}
+
+.brand-titles #site-name a {
+  font-family: var(--font-serif) !important;
+  font-size: 1.15rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.12em !important;
+  color: var(--color-warm-white) !important;
+}
+
+.site-subtag {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--color-gold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-top: 1px;
+}
+
+#user-tools {
+  font-size: 0.85rem !important;
+  color: var(--color-muted) !important;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+#user-tools a {
+  border: 1px solid var(--color-border);
+  padding: 5px 12px;
+  border-radius: 4px;
+  background: var(--color-soft-black);
+}
+
+#user-tools a:hover {
+  border-color: var(--color-gold);
+  color: var(--color-warm-white) !important;
+}
+
+.view-storefront-btn {
+  background: var(--color-soft-black) !important;
+  border: 1px solid var(--color-gold) !important;
+  color: var(--color-gold) !important;
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  letter-spacing: 0.04em;
+}
+
+.view-storefront-btn:hover {
+  background: var(--color-gold) !important;
+  color: var(--color-obsidian) !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Breadcrumbs                                                                */
+/* -------------------------------------------------------------------------- */
+
+div.breadcrumbs {
+  background-color: var(--color-soft-black) !important;
+  border-bottom: 1px solid var(--color-border) !important;
+  color: var(--color-muted) !important;
+  font-size: 0.82rem !important;
+  padding: 10px 28px !important;
+}
+
+div.breadcrumbs a {
+  color: var(--color-muted) !important;
+}
+
+div.breadcrumbs a:hover {
+  color: var(--color-gold) !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Operational KPI Cards (Dashboard)                                          */
+/* -------------------------------------------------------------------------- */
+
+.admin-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.kpi-card {
+  background: var(--color-card-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  transition: border-color 200ms ease, transform 200ms ease;
+}
+
+.kpi-card:hover {
+  border-color: var(--color-gold);
+  transform: translateY(-2px);
+}
+
+.kpi-icon {
+  font-size: 1.4rem;
+  color: var(--color-gold);
+  margin-bottom: 8px;
+}
+
+.kpi-value {
+  font-family: var(--font-serif);
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--color-warm-white);
+  line-height: 1.1;
+  display: block;
+}
+
+.kpi-highlight {
+  color: var(--color-gold);
+}
+
+.kpi-label {
+  font-size: 0.8rem;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-top: 4px;
+  display: block;
+}
+
+.kpi-link {
+  margin-top: 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  align-self: flex-start;
+}
+
+.kpi-warning {
+  border-color: rgba(255, 160, 0, 0.4);
+}
+
+/* Quick Action Toolbar */
+.admin-quick-actions {
+  background: var(--color-soft-black);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 14px 20px;
+  margin-bottom: 24px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.quick-actions-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-muted);
+  margin-right: 8px;
+}
+
+.btn-quick-action {
+  background: var(--color-card-bg) !important;
+  border: 1px solid var(--color-border) !important;
+  color: var(--color-warm-white) !important;
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  transition: all 150ms ease;
+}
+
+.btn-quick-action:hover {
+  border-color: var(--color-gold) !important;
+  color: var(--color-gold) !important;
+  background: var(--color-surface-hover) !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Dashboard Module Cards & Tables                                            */
+/* -------------------------------------------------------------------------- */
+
+.module {
+  background: var(--color-card-bg) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 6px !important;
+  margin-bottom: 24px !important;
+  overflow: hidden;
+}
+
+.module caption, .module h2 {
+  background: #1C1A16 !important;
+  color: var(--color-gold) !important;
+  font-family: var(--font-serif) !important;
+  font-size: 0.95rem !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  padding: 12px 18px !important;
+  border-bottom: 1px solid var(--color-border) !important;
+}
+
+.module table {
+  width: 100%;
+}
+
+.module tr:hover {
+  background-color: var(--color-surface-hover) !important;
+}
+
+.module th, .module td {
+  border-bottom: 1px solid var(--color-border-subtle) !important;
+  padding: 10px 18px !important;
+  color: var(--color-warm-white) !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Changelist / Model List Pages                                              */
+/* -------------------------------------------------------------------------- */
+
+#changelist {
+  background: transparent !important;
+}
+
+#changelist table {
+  background: var(--color-card-bg) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 6px !important;
+  overflow: hidden;
+}
+
+#changelist table thead th {
+  background: #1C1A16 !important;
+  color: var(--color-gold) !important;
+  font-size: 0.8rem !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+  padding: 12px 16px !important;
+  border-bottom: 1px solid var(--color-border) !important;
+}
+
+#changelist table tbody tr:hover {
+  background: var(--color-surface-hover) !important;
+}
+
+#changelist table tbody td {
+  border-bottom: 1px solid var(--color-border-subtle) !important;
+  padding: 10px 16px !important;
+  color: var(--color-warm-white) !important;
+}
+
+/* Filter Sidebar */
+#changelist-filter {
+  background: var(--color-card-bg) !important;
+  border-left: 1px solid var(--color-border) !important;
+  padding: 18px !important;
+}
+
+#changelist-filter h2 {
+  background: transparent !important;
+  color: var(--color-gold) !important;
+  font-family: var(--font-serif) !important;
+  font-size: 0.88rem !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.08em !important;
+  border-bottom: 1px solid var(--color-border) !important;
+  padding-bottom: 8px !important;
+}
+
+#changelist-filter h3 {
+  color: var(--color-muted) !important;
+  font-size: 0.78rem !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+  margin-top: 16px !important;
+}
+
+#changelist-filter li.selected a {
+  color: var(--color-gold) !important;
+  font-weight: 700 !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Forms, Fieldsets, & Inputs                                                 */
+/* -------------------------------------------------------------------------- */
+
+fieldset {
+  background: var(--color-card-bg) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 6px !important;
+  padding: 20px !important;
+  margin-bottom: 24px !important;
+}
+
+fieldset h2 {
+  background: transparent !important;
+  color: var(--color-gold) !important;
+  font-family: var(--font-serif) !important;
+  font-size: 1rem !important;
+  letter-spacing: 0.06em !important;
+  border-bottom: 1px solid var(--color-border) !important;
+  padding-bottom: 10px !important;
+  margin-bottom: 16px !important;
+}
+
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="url"],
+input[type="number"],
+input[type="tel"],
+textarea,
+select {
+  background-color: var(--color-obsidian) !important;
+  border: 1px solid var(--color-border) !important;
+  color: var(--color-warm-white) !important;
+  padding: 8px 12px !important;
+  border-radius: 4px !important;
+  font-family: var(--font-sans) !important;
+  font-size: 0.88rem !important;
+  outline: none !important;
+  transition: border-color 150ms ease;
+}
+
+input:focus, textarea:focus, select:focus {
+  border-color: var(--color-gold) !important;
+  box-shadow: 0 0 0 1px var(--color-gold) !important;
+}
+
+/* Action Buttons */
+.button, input[type="submit"], input[type="button"], .submit-row input {
+  background: linear-gradient(180deg, #D4AF37 0%, var(--color-gold) 100%) !important;
+  color: #000000 !important;
+  border: none !important;
+  font-weight: 600 !important;
+  font-size: 0.82rem !important;
+  letter-spacing: 0.05em !important;
+  text-transform: uppercase !important;
+  padding: 8px 18px !important;
+  border-radius: 4px !important;
+  cursor: pointer;
+  transition: filter 150ms ease;
+}
+
+.button:hover, input[type="submit"]:hover {
+  filter: brightness(1.15) !important;
+}
+
+.submit-row {
+  background: var(--color-soft-black) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 6px !important;
+  padding: 16px !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Login Page                                                                 */
+/* -------------------------------------------------------------------------- */
+
+body.login {
+  background: radial-gradient(circle at 50% 30%, #1C1914 0%, var(--color-obsidian) 80%) !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+body.login #container {
+  width: 100%;
+  max-width: 440px;
+  background: var(--color-card-bg) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 8px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8);
+  padding: 32px;
+}
+
+.login-brand-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.brand-crest-large {
+  width: 52px;
+  height: 52px;
+  border: 1px solid var(--color-gold);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 14px;
+  background: radial-gradient(circle, #2A261E 0%, #12110E 100%);
+}
+
+.brand-crest-large .brand-monogram {
+  font-size: 28px;
+}
+
+.login-brand-title {
+  font-family: var(--font-serif) !important;
+  font-size: 1.25rem !important;
+  color: var(--color-warm-white) !important;
+  letter-spacing: 0.14em !important;
+  margin: 0 0 6px !important;
+}
+
+.login-brand-subtitle {
+  font-size: 0.78rem;
+  color: var(--color-gold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin: 0 0 16px;
+}
+
+.login-gold-rule {
+  width: 48px;
+  height: 1px;
+  background: var(--color-gold);
+  margin: 0 auto;
+}
+
+body.login .form-row {
+  margin-bottom: 16px;
+}
+
+body.login .submit-row {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  margin-top: 24px;
+}
+
+body.login .submit-row input {
+  width: 100%;
+  padding: 12px !important;
+  font-size: 0.9rem !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Responsive Adjustments                                                     */
+/* -------------------------------------------------------------------------- */
+
+@media (max-width: 768px) {
+  #header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 16px !important;
+  }
+
+  .admin-kpi-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  #changelist {
+    flex-direction: column;
+  }
+
+  #changelist-filter {
+    border-left: none !important;
+    border-top: 1px solid var(--color-border) !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}

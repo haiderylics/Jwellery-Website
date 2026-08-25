@@ -5,8 +5,30 @@ from django import template
 from backend.apps.catalog.models import Product
 from backend.apps.content.models import Review
 from backend.apps.promotions.models import Promotion
+from backend.apps.settings.models import SiteSettings
 
 register = template.Library()
+
+
+@register.simple_tag
+def get_site_branding() -> dict:
+    """Fetch the active configured brand name, monogram, and tagline for Django Admin templates."""
+    try:
+        settings = SiteSettings.objects.first()
+        brand_name = settings.brand_name if (settings and settings.brand_name) else "AHS JEWELLERS"
+        monogram = brand_name.strip()[:1].upper() if brand_name else "A"
+        tagline = settings.tagline if (settings and settings.tagline) else "Operations & Merchandising Console"
+        return {
+            "brand_name": brand_name,
+            "monogram": monogram,
+            "tagline": tagline,
+        }
+    except Exception:
+        return {
+            "brand_name": "AHS JEWELLERS",
+            "monogram": "A",
+            "tagline": "Operations & Merchandising Console",
+        }
 
 
 @register.simple_tag
@@ -36,3 +58,4 @@ def get_operational_metrics() -> dict:
             "active_promotions": 0,
             "published_reviews": 0,
         }
+

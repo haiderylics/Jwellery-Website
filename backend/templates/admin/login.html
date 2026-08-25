@@ -1,5 +1,5 @@
 {% extends "admin/login.html" %}
-{% load static %}
+{% load static admin_dashboard_tags %}
 
 {% block extrahead %}
   {{ block.super }}
@@ -10,12 +10,13 @@
 {% endblock %}
 
 {% block branding %}
+{% get_site_branding as branding %}
 <div class="login-brand-header">
   <div class="brand-crest-large">
-    <span class="brand-monogram">Z</span>
+    <span class="brand-monogram">{{ branding.monogram }}</span>
   </div>
-  <h1 class="login-brand-title">ZIRCONIA FINE JEWELS</h1>
-  <p class="login-brand-subtitle">Operations &amp; Merchandising Management</p>
+  <h1 class="login-brand-title">{{ branding.brand_name|upper }}</h1>
+  <p class="login-brand-subtitle">{{ branding.tagline|default:"Operations & Merchandising Management" }}</p>
   <div class="login-gold-rule"></div>
 </div>
 {% endblock %}

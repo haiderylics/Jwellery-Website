@@ -33,11 +33,13 @@ export function buildWhatsAppOrderUrl(
   customer: CustomerOrderInfo,
   cartItems: CartItemResolved[],
   deliverySettings: DeliverySettings | null,
-  siteUrl: string
+  siteUrl: string,
+  brandName?: string
 ): string {
   // Normalize destination phone number (remove +, spaces, hyphens)
   const cleanPhone = whatsappNumber.replace(/[^0-9]/g, "") || "923001234567";
   const baseUrl = siteUrl.replace(/\/$/, "");
+  const brand = (brandName || "Fine Jewels").toUpperCase();
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.lineTotal, 0);
   const freeThreshold = deliverySettings ? parseFloat(deliverySettings.free_delivery_threshold) : 5000;
@@ -55,7 +57,7 @@ export function buildWhatsAppOrderUrl(
 
   // Build structured message lines
   const lines: string[] = [
-    "✨ *NEW ORDER INQUIRY — ZIRCONIA FINE JEWELS* ✨",
+    `✨ *NEW ORDER INQUIRY — ${brand}* ✨`,
     "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
     "",
     "👤 *CUSTOMER DETAILS:*",
@@ -105,11 +107,13 @@ export function buildDirectConsultationUrl(
   whatsappNumber: string,
   productName: string,
   productSlug: string,
-  siteUrl: string
+  siteUrl: string,
+  brandName?: string
 ): string {
   const cleanPhone = whatsappNumber.replace(/[^0-9]/g, "") || "923001234567";
   const productUrl = `${siteUrl.replace(/\/$/, "")}/product/${encodeURIComponent(productSlug)}`;
   const cleanTitle = sanitizeField(productName, 80);
-  const text = `Hello Zirconia Jewels, I am inquiring about *${cleanTitle}* (${productUrl}). Please share customization details and availability.`;
+  const brand = brandName || "Jewels";
+  const text = `Hello ${brand}, I am inquiring about *${cleanTitle}* (${productUrl}). Please share customization details and availability.`;
   return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
 }

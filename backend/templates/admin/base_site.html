@@ -1,5 +1,5 @@
 {% extends "admin/base.html" %}
-{% load static %}
+{% load static admin_dashboard_tags %}
 
 {% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('Jewellery Operations') }}{% endblock %}
 
@@ -12,13 +12,14 @@
 {% endblock %}
 
 {% block branding %}
+{% get_site_branding as branding %}
 <div id="site-branding">
   <div class="brand-crest">
-    <span class="brand-monogram">Z</span>
+    <span class="brand-monogram">{{ branding.monogram }}</span>
   </div>
   <div class="brand-titles">
-    <h1 id="site-name"><a href="{% url 'admin:index' %}">ZIRCONIA FINE JEWELS</a></h1>
-    <span class="site-subtag">Operations &amp; Merchandising Console</span>
+    <h1 id="site-name"><a href="{% url 'admin:index' %}">{{ branding.brand_name|upper }}</a></h1>
+    <span class="site-subtag">{{ branding.tagline }}</span>
   </div>
 </div>
 {% endblock %}

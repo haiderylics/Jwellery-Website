@@ -1,9 +1,19 @@
 import React, { useState } from "react";
 import { Sparkles } from "lucide-react";
 import { ProductImage } from "@/types/api";
+import { useSiteSettings } from "@/context/SiteSettingsContext";
 
 export interface ResponsiveImageProps {
-  image?: ProductImage | { image_url?: string | null; thumbnail_url?: string | null; medium_url?: string | null; large_url?: string | null; alt_text?: string } | null;
+  image?:
+    | ProductImage
+    | {
+        image_url?: string | null;
+        thumbnail_url?: string | null;
+        medium_url?: string | null;
+        large_url?: string | null;
+        alt_text?: string;
+      }
+    | null;
   src?: string | null;
   alt?: string;
   className?: string;
@@ -21,15 +31,25 @@ export const ResponsiveImage: React.FC<ResponsiveImageProps> = ({
   aspectRatio = "1/1",
   priority = false,
   sizes = "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw",
-  fallbackText = "ZIRCONIA FINE JEWELS",
+  fallbackText,
 }) => {
   const [hasError, setHasError] = useState(false);
+  const { brandName } = useSiteSettings();
 
   const mainSrc = src || image?.image_url;
   const thumbSrc = image?.thumbnail_url;
   const medSrc = image?.medium_url;
   const lrgSrc = image?.large_url;
-  const altText = alt || ("alt_text" in (image || {}) ? (image as any).alt_text : "") || "Fine Jewellery Piece";
+  const altText =
+    alt ||
+    ("alt_text" in (image || {}) ? (image as any).alt_text : "") ||
+    "Fine Jewellery Piece";
+
+  const displayFallbackText = (
+    fallbackText ||
+    brandName ||
+    "FINE JEWELLERY"
+  ).toUpperCase();
 
   // Build responsive srcSet if variant URLs are present
   const srcSetEntries: string[] = [];
@@ -40,15 +60,19 @@ export const ResponsiveImage: React.FC<ResponsiveImageProps> = ({
 
   if (!mainSrc || hasError) {
     return (
-      <div className={`responsive-image-placeholder aspect-${aspectRatio.replace("/", "-")} ${className}`}>
+      <div
+        className={`responsive-image-placeholder aspect-${aspectRatio.replace("/", "-")} ${className}`}
+      >
         <Sparkles size={24} className="placeholder-sparkle" />
-        <span className="placeholder-brand">{fallbackText}</span>
+        <span className="placeholder-brand">{displayFallbackText}</span>
       </div>
     );
   }
 
   return (
-    <div className={`responsive-image-wrapper aspect-${aspectRatio.replace("/", "-")} ${className}`}>
+    <div
+      className={`responsive-image-wrapper aspect-${aspectRatio.replace("/", "-")} ${className}`}
+    >
       <img
         src={medSrc || mainSrc}
         srcSet={srcSet}

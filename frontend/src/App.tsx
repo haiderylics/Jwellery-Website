@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { DeliverySettings, Popup, Promotion, SiteSettings } from "@/types/api";
+import { Popup, Promotion } from "@/types/api";
 import { api } from "@/services/api";
+import { SiteSettingsProvider, useSiteSettings } from "@/context/SiteSettingsContext";
 import { AnnouncementBar } from "@/components/layout/AnnouncementBar";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { SiteHeader } from "@/components/layout/SiteHeader";
@@ -15,12 +16,11 @@ import { ProductDetailPage } from "@/pages/ProductDetailPage";
 import { ReviewsPage } from "@/pages/ReviewsPage";
 import { ShopPage } from "@/pages/ShopPage";
 
-export const App: React.FC = () => {
+const StorefrontInner: React.FC = () => {
   const [currentPath, setCurrentPath] = useState<string>(window.location.pathname || "/");
-  const [settings, setSettings] = useState<SiteSettings | null>(null);
-  const [deliverySettings, setDeliverySettings] = useState<DeliverySettings | null>(null);
   const [announcements, setAnnouncements] = useState<Promotion[]>([]);
   const [activePopup, setActivePopup] = useState<Popup | null>(null);
+  const { settings, deliverySettings } = useSiteSettings();
 
   // Sync browser back/forward buttons
   useEffect(() => {
@@ -31,25 +31,21 @@ export const App: React.FC = () => {
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
-  // Fetch initial global settings, active announcements & popup
+  // Fetch active promotions & popup
   useEffect(() => {
-    async function loadGlobalSettings() {
+    async function loadPromotions() {
       try {
-        const [siteData, delData, promoData, popupData] = await Promise.all([
-          api.getSiteSettings(),
-          api.getDeliverySettings(),
+        const [promoData, popupData] = await Promise.all([
           api.getActivePromotions(),
           api.getActivePopup(),
         ]);
-        setSettings(siteData);
-        setDeliverySettings(delData);
         setAnnouncements(promoData.filter((p) => p.show_in_announcement_bar));
         setActivePopup(popupData?.data || null);
       } catch {
-        // Fallback gracefully to default state
+        // Fallback gracefully
       }
     }
-    loadGlobalSettings();
+    loadPromotions();
   }, []);
 
   const navigate = (path: string) => {
@@ -145,5 +141,13 @@ export const App: React.FC = () => {
       {/* 5. Promotional Modal Popup */}
       <ActivePopupModal popup={activePopup} onNavigate={navigate} />
     </div>
+  );
+};
+
+export const App: React.FC = () => {
+  return (
+    <SiteSettingsProvider>
+      <StorefrontInner />
+    </SiteSettingsProvider>
   );
 };

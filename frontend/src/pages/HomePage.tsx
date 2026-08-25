@@ -68,6 +68,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
 
   const whatsappPhone = site_settings?.whatsapp_number?.replace(/[^0-9]/g, "") || "923001234567";
 
+  const brandName = site_settings?.brand_name || "Jewellery Brand";
+
   return (
     <div className="home-page">
       {/* 1. HERO SECTION */}
@@ -100,7 +102,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
               size="lg"
               onClick={() =>
                 window.open(
-                  `https://wa.me/${whatsappPhone}?text=Hello%20Zirconia%20Jewels,%20I%20would%20like%20to%20inquire%20about%20your%20collection.`,
+                  `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(`Hello ${brandName}, I would like to inquire about your collection.`)}`,
                   "_blank"
                 )
               }
@@ -227,7 +229,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
                 className="btn btn-whatsapp btn-sm mt-3"
                 onClick={() =>
                   window.open(
-                    `https://wa.me/${whatsappPhone}?text=Hello%20Zirconia%20Jewels,%20I%20would%20like%20to%20discuss%20a%20custom%20order.`,
+                    `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(`Hello ${brandName}, I would like to discuss a bespoke custom order.`)}`,
                     "_blank"
                   )
                 }

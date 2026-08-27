@@ -30,6 +30,15 @@ def health_readiness_view(request: HttpRequest) -> HttpResponse:
     Fails safely with 503 without leaking credentials or infrastructure internals.
     """
     try:
+        default_storage_backend = settings.STORAGES.get("default", {}).get("BACKEND", "")
+        if (
+            default_storage_backend
+            == "backend.apps.common.cloudinary_storage.CloudinaryMediaStorage"
+        ):
+            from backend.apps.common.cloudinary_storage import cloudinary_configuration_is_valid
+
+            if not cloudinary_configuration_is_valid():
+                return JsonResponse({"status": "unready"}, status=503)
         connection.ensure_connection()
         return JsonResponse({"status": "ready"}, status=200)
     except Exception:

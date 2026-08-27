@@ -106,7 +106,7 @@ def test_production_settings_loads_with_valid_config(monkeypatch: pytest.MonkeyP
     )
 
 
-def test_production_settings_require_cloudinary_credentials(
+def test_production_settings_load_for_static_build_without_cloudinary_credentials(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("DJANGO_SECRET_KEY", "a" * 55)
@@ -116,5 +116,11 @@ def test_production_settings_require_cloudinary_credentials(
     monkeypatch.delenv("CLOUDINARY_API_KEY", raising=False)
     monkeypatch.delenv("CLOUDINARY_API_SECRET", raising=False)
 
-    with pytest.raises(ImproperlyConfigured, match="CLOUDINARY_CLOUD_NAME"):
-        importlib.reload(importlib.import_module("backend.config.settings.production"))
+    prod_settings = importlib.reload(importlib.import_module("backend.config.settings.production"))
+
+    assert prod_settings.STORAGES["staticfiles"]["BACKEND"] == (
+        "whitenoise.storage.CompressedManifestStaticFilesStorage"
+    )
+    assert prod_settings.STORAGES["default"]["BACKEND"] == (
+        "backend.apps.common.cloudinary_storage.CloudinaryMediaStorage"
+    )

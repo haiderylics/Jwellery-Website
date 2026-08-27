@@ -7,4 +7,5 @@ class CommonConfig(AppConfig):
     verbose_name = "Common"
 
     def ready(self) -> None:
+        import backend.apps.common.checks  # noqa: F401
         import backend.apps.common.signals  # noqa: F401

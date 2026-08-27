@@ -13,7 +13,16 @@ import cloudinary
 import cloudinary.api
 import cloudinary.uploader
 import cloudinary.utils
+from django.core.exceptions import ImproperlyConfigured
 from django.core.files.storage import Storage
+
+
+def cloudinary_configuration_is_valid() -> bool:
+    """Return whether the configured default storage has all required credentials."""
+    from django.conf import settings
+
+    options = settings.STORAGES.get("default", {}).get("OPTIONS", {})
+    return all(options.get(key) for key in ("cloud_name", "api_key", "api_secret"))
 
 
 class CloudinaryMediaStorage(Storage):
@@ -29,9 +38,14 @@ class CloudinaryMediaStorage(Storage):
 
     def __init__(self, **options: Any) -> None:
         super().__init__()
-        self.cloud_name = options["cloud_name"]
-        self.api_key = options["api_key"]
-        self.api_secret = options["api_secret"]
+        self.cloud_name = options.get("cloud_name", "")
+        self.api_key = options.get("api_key", "")
+        self.api_secret = options.get("api_secret", "")
+        if not all((self.cloud_name, self.api_key, self.api_secret)):
+            raise ImproperlyConfigured(
+                "Cloudinary media storage requires CLOUDINARY_CLOUD_NAME, "
+                "CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in production."
+            )
         cloudinary.config(
             cloud_name=self.cloud_name,
             api_key=self.api_key,

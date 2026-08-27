@@ -3,6 +3,11 @@
 from io import BytesIO
 from unittest.mock import patch
 
+import pytest
+from django.core.checks import run_checks
+from django.core.exceptions import ImproperlyConfigured
+from django.test import Client, override_settings
+
 from backend.apps.common.cloudinary_storage import CloudinaryMediaStorage
 
 
@@ -41,3 +46,27 @@ def test_cloudinary_storage_uses_video_resource_type_and_deletes_with_invalidati
         "resource_type": "video",
         "invalidate": True,
     }
+
+
+def test_cloudinary_storage_fails_without_credentials_instead_of_using_local_media() -> None:
+    with pytest.raises(ImproperlyConfigured, match="Cloudinary media storage requires"):
+        CloudinaryMediaStorage(cloud_name="", api_key="", api_secret="")
+
+
+@override_settings(
+    DEBUG=False,
+    STORAGES={
+        "default": {
+            "BACKEND": "backend.apps.common.cloudinary_storage.CloudinaryMediaStorage",
+            "OPTIONS": {"cloud_name": "", "api_key": "", "api_secret": ""},
+        },
+        "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
+    },
+)
+def test_missing_cloudinary_credentials_fail_deploy_check_and_readiness_safely() -> None:
+    errors = run_checks(include_deployment_checks=True)
+    assert any(error.id == "common.E001" for error in errors)
+
+    response = Client().get("/health/ready/")
+    assert response.status_code == 503
+    assert response.json() == {"status": "unready"}

@@ -215,6 +215,11 @@ def generate_image_variants(storage_file_path: str) -> dict[str, str]:
 
     Returns a dict mapping variant name to storage path.
     """
+    if getattr(default_storage, "is_cloudinary_storage", False):
+        # Cloudinary serves the fixed responsive URLs below on demand and caches
+        # them at the CDN, avoiding three duplicate stored files per upload.
+        return {}
+
     if not default_storage.exists(storage_file_path):
         return {}
 
@@ -282,6 +287,10 @@ def cleanup_storage_media(storage_file_path: str) -> None:
         return
 
     try:
+        if getattr(default_storage, "is_cloudinary_storage", False):
+            default_storage.delete(storage_file_path)
+            return
+
         # Delete variants
         for variant_name in IMAGE_VARIANTS.keys():
             var_path = get_variant_path(storage_file_path, variant_name)
@@ -299,6 +308,11 @@ def get_variant_url(image_field: Any, variant_name: str, request: Any = None) ->
     """Get absolute or relative URL for a specific image variant, falling back to original if variant is missing."""
     if not image_field or not getattr(image_field, "name", None):
         return None
+
+    if getattr(default_storage, "is_cloudinary_storage", False):
+        from backend.apps.common.cloudinary_storage import cloudinary_transformed_url
+
+        return cloudinary_transformed_url(image_field.name, IMAGE_VARIANTS[variant_name][0])
 
     variant_path = get_variant_path(image_field.name, variant_name)
     if default_storage.exists(variant_path):

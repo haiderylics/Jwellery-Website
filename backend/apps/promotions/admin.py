@@ -5,7 +5,7 @@ from django.contrib import admin, messages
 from django.db.models import QuerySet
 from django.http import HttpRequest
 from django.utils import timezone
-from django.utils.safestring import mark_safe
+from django.utils.html import format_html
 
 from backend.apps.common.validators import validate_safe_url
 
@@ -101,14 +101,18 @@ class PromotionAdmin(admin.ModelAdmin):
     @admin.display(description="Schedule Status")
     def schedule_status_badge(self, obj: Promotion) -> str:
         if not obj.is_active:
-            return mark_safe('<span style="color: #c62828; font-weight: bold;">Inactive</span>')
+            return format_html(
+                '<span style="color: #c62828; font-weight: bold;">{}</span>', "Inactive"
+            )
 
         now = timezone.now()
         if obj.start_datetime and now < obj.start_datetime:
-            return mark_safe('<span style="color: #0288d1;">Upcoming</span>')
+            return format_html('<span style="color: #0288d1;">{}</span>', "Upcoming")
         if obj.end_datetime and now > obj.end_datetime:
-            return mark_safe('<span style="color: #757575;">Expired</span>')
-        return mark_safe('<span style="color: #2e7d32; font-weight: bold;">● Active Now</span>')
+            return format_html('<span style="color: #757575;">{}</span>', "Expired")
+        return format_html(
+            '<span style="color: #2e7d32; font-weight: bold;">{}</span>', "Active Now"
+        )
 
     @admin.action(description="Activate selected promotions", permissions=["change"])
     def activate_promotions(self, request: HttpRequest, queryset: QuerySet) -> None:
@@ -192,14 +196,18 @@ class PopupAdmin(admin.ModelAdmin):
     @admin.display(description="Schedule Status")
     def schedule_status_badge(self, obj: Popup) -> str:
         if not obj.is_active:
-            return mark_safe('<span style="color: #c62828; font-weight: bold;">Inactive</span>')
+            return format_html(
+                '<span style="color: #c62828; font-weight: bold;">{}</span>', "Inactive"
+            )
 
         now = timezone.now()
         if obj.start_datetime and now < obj.start_datetime:
-            return mark_safe('<span style="color: #0288d1;">Upcoming</span>')
+            return format_html('<span style="color: #0288d1;">{}</span>', "Upcoming")
         if obj.end_datetime and now > obj.end_datetime:
-            return mark_safe('<span style="color: #757575;">Expired</span>')
-        return mark_safe('<span style="color: #2e7d32; font-weight: bold;">● Active Now</span>')
+            return format_html('<span style="color: #757575;">{}</span>', "Expired")
+        return format_html(
+            '<span style="color: #2e7d32; font-weight: bold;">{}</span>', "Active Now"
+        )
 
     @admin.action(description="Activate selected popups", permissions=["change"])
     def activate_popups(self, request: HttpRequest, queryset: QuerySet) -> None:

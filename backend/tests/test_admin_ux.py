@@ -10,6 +10,7 @@ from django.test import Client, override_settings
 
 from backend.apps.catalog.models import Category, Product
 from backend.apps.common.templatetags.admin_dashboard_tags import get_operational_metrics
+from backend.apps.settings.models import SiteSettings
 
 User = get_user_model()
 
@@ -26,12 +27,13 @@ class TestAdminBrandingAndDashboard:
             email="admin_qa@zirconiajewels.demo",
             password="secure_admin_password_123",
         )
+        SiteSettings.get_solo()
 
     def test_admin_login_page_renders_branded_templates(self):
         res = self.client.get("/admin/login/")
         assert res.status_code == 200
         content = res.content.decode("utf-8")
-        assert "ZIRCONIA FINE JEWELS" in content
+        assert "JEWELLERY BRAND" in content
         assert "brand-monogram" in content
         assert "custom_admin.css" in content
 

@@ -17,7 +17,11 @@ def get_site_branding() -> dict:
         settings = SiteSettings.objects.first()
         brand_name = settings.brand_name if (settings and settings.brand_name) else "AHS JEWELLERS"
         monogram = brand_name.strip()[:1].upper() if brand_name else "A"
-        tagline = settings.tagline if (settings and settings.tagline) else "Operations & Merchandising Console"
+        tagline = (
+            settings.tagline
+            if (settings and settings.tagline)
+            else "Operations & Merchandising Console"
+        )
         return {
             "brand_name": brand_name,
             "monogram": monogram,
@@ -58,4 +62,3 @@ def get_operational_metrics() -> dict:
             "active_promotions": 0,
             "published_reviews": 0,
         }
-

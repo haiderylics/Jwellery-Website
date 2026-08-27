@@ -56,7 +56,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onNavigate }) => {
               <h2 className="narrative-heading">Devotion to Purity, Proportion &amp; Radiance</h2>
               <p className="narrative-paragraph">
                 {about?.story_text ||
-                  "Founded with a passion for architectural purity and traditional heritage, Zirconia Fine Jewels creates bespoke pieces in hallmarked 22K/18K gold and certified gemstones. Every piece represents hours of dedicated mastercraft in our private atelier."}
+                  "Explore our collection and contact us to discuss the details that matter for your next piece."}
               </p>
               <div className="narrative-quote">
                 <p>
@@ -101,9 +101,9 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onNavigate }) => {
                 <div className="pillar-icon-box">
                   <Gem size={28} />
                 </div>
-                <h3>Certified Pure Stones</h3>
+                <h3>Thoughtful Selection</h3>
                 <p>
-                  Each diamond, ruby, and emerald is rigorously inspected for exceptional color, cut precision, and natural brilliance before setting.
+                  We help you explore styles, materials, and product details before you decide.
                 </p>
               </div>
 
@@ -113,7 +113,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onNavigate }) => {
                 </div>
                 <h3>Master Goldsmithing</h3>
                 <p>
-                  Handcrafted by master artisans with generational experience in hallmarked 18K, 21K, and 22K yellow and white gold.
+                  Our collection is curated for everyday moments and special occasions.
                 </p>
               </div>
 
@@ -133,7 +133,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onNavigate }) => {
                 </div>
                 <h3>Atelier Guarantee</h3>
                 <p>
-                  Accompanied by authentic hallmarked certification and insured delivery across Pakistan with private VIP concierge support.
+                  Product-specific information and delivery options are confirmed directly with our team.
                 </p>
               </div>
             </div>

@@ -95,7 +95,25 @@ if os.environ.get("DJANGO_SECURE_PROXY_SSL_HEADER", "").lower() in ("true", "1")
 # ------------------------------------------------------------------------------
 # WhiteNoise serves only collected application static files. User-uploaded media
 # remains on its separate storage and is never exposed through this middleware.
+cloudinary_cloud_name = os.environ.get("CLOUDINARY_CLOUD_NAME", "")
+cloudinary_api_key = os.environ.get("CLOUDINARY_API_KEY", "")
+cloudinary_api_secret = os.environ.get("CLOUDINARY_API_SECRET", "")
+
+if not all((cloudinary_cloud_name, cloudinary_api_key, cloudinary_api_secret)):
+    raise ImproperlyConfigured(
+        "CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET "
+        "are mandatory in production."
+    )
+
 STORAGES = {
+    "default": {
+        "BACKEND": "backend.apps.common.cloudinary_storage.CloudinaryMediaStorage",
+        "OPTIONS": {
+            "cloud_name": cloudinary_cloud_name,
+            "api_key": cloudinary_api_key,
+            "api_secret": cloudinary_api_secret,
+        },
+    },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },

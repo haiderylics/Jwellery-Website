@@ -157,7 +157,7 @@ export const CartPage: React.FC<CartPageProps> = ({
     e.preventDefault();
     if (!validateForm()) return;
 
-    const whatsappNumber = settings?.whatsapp_number || "+923001234567";
+    const whatsappNumber = settings?.whatsapp_number || "";
     const siteUrl = settings?.canonical_site_url || window.location.origin;
 
     const whatsappUrl = buildWhatsAppOrderUrl(

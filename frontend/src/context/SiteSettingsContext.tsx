@@ -21,7 +21,7 @@ const defaultContextValue: SiteSettingsContextValue = {
   deliverySettings: null,
   brandName: "AHS Jewellers",
   tagline: "Bespoke Haute Joaillerie & Timeless Gold Craftsmanship",
-  whatsappNumber: "+923127674165",
+  whatsappNumber: "",
   contactEmail: "concierge@ahsjewellers.pk",
   contactPhone: "+92 312 7674165",
   socialLinks: [],
@@ -63,7 +63,7 @@ export const SiteSettingsProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const brandName = settings?.brand_name || "AHS Jewellers";
   const tagline = settings?.tagline || "Bespoke Haute Joaillerie & Timeless Gold Craftsmanship";
-  const whatsappNumber = settings?.whatsapp_number || "+923127674165";
+  const whatsappNumber = settings?.whatsapp_number || "";
   const contactEmail = settings?.contact_email || "concierge@ahsjewellers.pk";
   const contactPhone = settings?.contact_phone || "+92 312 7674165";
   const socialLinks = settings?.social_links || [];

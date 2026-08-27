@@ -66,7 +66,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
     about,
   } = data;
 
-  const whatsappPhone = site_settings?.whatsapp_number?.replace(/[^0-9]/g, "") || "923001234567";
+  const whatsappPhone = site_settings?.whatsapp_number?.replace(/[^0-9]/g, "") || "";
 
   const brandName = site_settings?.brand_name || "Jewellery Brand";
 
@@ -85,7 +85,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
             <span className="gold-gradient-text">Gold, Diamonds & Grace</span>
           </h1>
           <p className="hero-description">
-            Discover artisanal 18K/21K/22K gold, certified solitaires, and bespoke bridal masterpieces
+            Discover the latest pieces and discuss custom options directly with our team
             handcrafted for a lifetime of brilliance.
           </p>
           <div className="hero-actions">

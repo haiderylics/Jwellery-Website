@@ -8,7 +8,7 @@ export interface ContactPageProps {
 }
 
 export const ContactPage: React.FC<ContactPageProps> = ({ settings }) => {
-  const whatsappPhone = settings?.whatsapp_number?.replace(/[^0-9]/g, "") || "923001234567";
+  const whatsappPhone = settings?.whatsapp_number?.replace(/[^0-9]/g, "") || "";
 
   return (
     <div className="page-container contact-page">
@@ -36,7 +36,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ settings }) => {
               </div>
               <div className="channel-text">
                 <span className="channel-label">Official WhatsApp Orders &amp; Inquiries</span>
-                <span className="channel-value">{settings?.whatsapp_number || "+92 300 1234567"}</span>
+                <span className="channel-value">{settings?.whatsapp_number || "Contact details available soon"}</span>
                 <a
                   href={`https://wa.me/${whatsappPhone}`}
                   target="_blank"
@@ -101,15 +101,15 @@ export const ContactPage: React.FC<ContactPageProps> = ({ settings }) => {
           <ul className="bespoke-perks">
             <li>
               <ShieldCheck size={18} />
-              <span>Complimentary 3D CAD rendering &amp; stone matching</span>
+              <span>Discuss your preferred style and requirements</span>
             </li>
             <li>
               <ShieldCheck size={18} />
-              <span>Authentic hallmarked gold purity certificate</span>
+              <span>Ask our team for product-specific details</span>
             </li>
             <li>
               <ShieldCheck size={18} />
-              <span>Insured delivery across Pakistan &amp; global shipping</span>
+              <span>Delivery options confirmed during consultation</span>
             </li>
           </ul>
 

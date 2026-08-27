@@ -25,7 +25,7 @@ export const SiteFooter: React.FC<SiteFooterProps> = ({
           <div className="highlight-item">
             <Sparkles className="highlight-icon" size={24} />
             <h4>100% Handcrafted</h4>
-            <p>Artisanal gold & gemstone master craftsmanship</p>
+            <p>Discover pieces for everyday moments and special occasions.</p>
           </div>
           <div className="highlight-item">
             <Truck className="highlight-icon" size={24} />

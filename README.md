@@ -11,6 +11,8 @@ A modern, secure, editorial jewellery catalog, shopping cart, and WhatsApp-assis
 - **Frontend:** Modern static client designed to consume versioned backend JSON APIs (`/api/v1/`).
 - **Checkout Model:** Client-side cart with server-authoritative pricing and inventory validation handoff to WhatsApp.
 - **Administration:** Django Admin for business content, merchandising, and settings management.
+- **Static files:** WhiteNoise serves collected Django static assets in Railway.
+- **Media:** Cloudinary stores admin-uploaded images and videos in production.
 
 ---
 

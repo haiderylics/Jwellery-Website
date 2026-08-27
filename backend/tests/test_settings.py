@@ -61,6 +61,9 @@ def test_production_settings_fails_without_postgres(monkeypatch: pytest.MonkeyPa
     monkeypatch.setenv("DJANGO_SECRET_KEY", valid_key)
     monkeypatch.setenv("DJANGO_ALLOWED_HOSTS", "example.com")
     monkeypatch.setenv("DATABASE_URL", "mysql://user:pass@localhost:3306/db")
+    monkeypatch.setenv("CLOUDINARY_CLOUD_NAME", "test-cloud")
+    monkeypatch.setenv("CLOUDINARY_API_KEY", "test-key")
+    monkeypatch.setenv("CLOUDINARY_API_SECRET", "test-secret")
 
     with pytest.raises(ImproperlyConfigured, match="Production requires PostgreSQL"):
         importlib.reload(importlib.import_module("backend.config.settings.production"))
@@ -73,6 +76,9 @@ def test_production_settings_loads_with_valid_config(monkeypatch: pytest.MonkeyP
     monkeypatch.setenv("DJANGO_ALLOWED_HOSTS", "example.com,api.example.com")
     monkeypatch.setenv("DJANGO_CSRF_TRUSTED_ORIGINS", "https://example.com")
     monkeypatch.setenv("DATABASE_URL", "postgresql://dbuser:dbpass@localhost:5432/proddb")
+    monkeypatch.setenv("CLOUDINARY_CLOUD_NAME", "test-cloud")
+    monkeypatch.setenv("CLOUDINARY_API_KEY", "test-key")
+    monkeypatch.setenv("CLOUDINARY_API_SECRET", "test-secret")
 
     prod_settings = importlib.reload(importlib.import_module("backend.config.settings.production"))
 
@@ -95,3 +101,20 @@ def test_production_settings_loads_with_valid_config(monkeypatch: pytest.MonkeyP
     assert prod_settings.MIDDLEWARE.index(whitenoise_middleware) == (
         prod_settings.MIDDLEWARE.index(security_middleware) + 1
     )
+    assert prod_settings.STORAGES["default"]["BACKEND"] == (
+        "backend.apps.common.cloudinary_storage.CloudinaryMediaStorage"
+    )
+
+
+def test_production_settings_require_cloudinary_credentials(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("DJANGO_SECRET_KEY", "a" * 55)
+    monkeypatch.setenv("DJANGO_ALLOWED_HOSTS", "example.com")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db")
+    monkeypatch.delenv("CLOUDINARY_CLOUD_NAME", raising=False)
+    monkeypatch.delenv("CLOUDINARY_API_KEY", raising=False)
+    monkeypatch.delenv("CLOUDINARY_API_SECRET", raising=False)
+
+    with pytest.raises(ImproperlyConfigured, match="CLOUDINARY_CLOUD_NAME"):
+        importlib.reload(importlib.import_module("backend.config.settings.production"))

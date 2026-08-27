@@ -105,7 +105,7 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
     setTimeout(() => setAddedFeedback(false), 2500);
   };
 
-  const whatsappPhone = settings?.whatsapp_number || "+923001234567";
+  const whatsappPhone = settings?.whatsapp_number || "";
   const canonicalUrl = settings?.canonical_site_url || "https://www.zirconiajewels.com";
   const whatsappInquiryUrl = buildDirectConsultationUrl(
     whatsappPhone,

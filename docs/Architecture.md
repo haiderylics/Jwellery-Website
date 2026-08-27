@@ -28,6 +28,11 @@ Browser
 
 The frontend is static/deployable independently. Django is the authoritative application/data layer.
 
+Production media is stored through the official Cloudinary Python SDK, configured as Django's
+default storage with server-only Railway credentials. WhiteNoise serves only collected Django
+static files. Cloudinary's CDN provides the fixed responsive image delivery variants; the
+application does not persist duplicate thumbnail files in production.
+
 ---
 
 ## 2. Recommended Stack
@@ -670,4 +675,3 @@ A backup that has never been restored is not a verified recovery strategy.
 - OWASP File Upload Cheat Sheet: https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html
 - DRF permissions: https://www.django-rest-framework.org/api-guide/permissions/
 - DRF throttling: https://www.django-rest-framework.org/api-guide/throttling/
-

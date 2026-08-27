@@ -553,3 +553,10 @@ APPROVED BY: Project Owner / Pre-Production QA & Admin UX Pass
 Build less, but build it properly.
 
 A smaller secure, fast and maintainable product that looks premium is better than a feature-heavy codebase that is rushed, fragile or insecure.
+# Production media and static deployment
+
+- Railway serves Django static files with WhiteNoise after the build-time `collectstatic` step.
+- Production Django media uses Cloudinary via the official Python SDK and requires the three
+  `CLOUDINARY_*` Railway variables. Development continues to use local filesystem media.
+- Product, gallery, review, about, promotion, popup, and product-video fields retain their
+  existing Django field schema; no production data migration is needed.

@@ -129,6 +129,27 @@ class Command(BaseCommand):
                         **missing_info,
                     )
 
+        # Cloudinary deliberately does not expose account-wide directory walks.
+        # Referenced assets are still checked individually above, while orphan
+        # cleanup remains a safe filesystem-only operation in development.
+        if getattr(default_storage, "is_cloudinary_storage", False):
+            self.stdout.write(
+                self.style.WARNING(
+                    "Cloudinary storage detected: account-wide orphan enumeration and cleanup are disabled."
+                )
+            )
+            self.stdout.write(
+                self.style.SUCCESS(f"Total DB Records with Media: {total_db_records}")
+            )
+            self.stdout.write(f"Total Unique Referenced Files: {len(referenced_files)}")
+            if missing_db_files:
+                self.stdout.write(
+                    self.style.ERROR(f"Missing referenced files: {len(missing_db_files)}")
+                )
+            else:
+                self.stdout.write(self.style.SUCCESS("[OK] No missing DB referenced files."))
+            return
+
         # 2. Walk storage directories under MEDIA_ROOT
         media_root = Path(getattr(settings, "MEDIA_ROOT", "media"))
         actual_files: list[dict[str, Any]] = []

@@ -147,6 +147,50 @@ def validate_secure_image(file_obj: Any) -> None:
         raise ValidationError(f"Corrupted or malicious image file rejected: {exc}") from exc
 
 
+def prepare_secure_image_upload(file_obj: Any) -> ContentFile:
+    """Validate and privacy-normalize an incoming image before it reaches remote storage.
+
+    This deliberately operates on the uploaded stream, never on a stored
+    ``FieldFile``.  It corrects EXIF orientation and re-encodes the image
+    without EXIF metadata, including GPS/camera information.
+    """
+    validate_secure_image(file_obj)
+    filename = Path(getattr(file_obj, "name", "upload.jpg")).name
+
+    try:
+        file_obj.seek(0)
+        with Image.open(file_obj) as source:
+            image = ImageOps.exif_transpose(source)
+            image_format = source.format.upper() if source.format else "JPEG"
+
+            # Preserve alpha where the source format supports it.
+            if image_format == "JPEG":
+                image = image.convert("RGB")
+            elif image.mode not in ("RGB", "RGBA"):
+                image = image.convert("RGBA" if "transparency" in image.info else "RGB")
+
+            output = io.BytesIO()
+            save_kwargs: dict[str, Any] = {}
+            if image_format in {"JPEG", "WEBP"}:
+                save_kwargs["quality"] = 90
+            image.save(output, format=image_format, **save_kwargs)
+    except Exception as exc:
+        # This is a processing failure on the incoming stream, not a storage
+        # error. Do not let callers misclassify backend failures as corruption.
+        log_security_event(
+            "security.upload_rejected",
+            reason="image_normalization_failure",
+            filename=filename,
+            error=str(exc),
+        )
+        raise ValidationError("Image could not be safely normalized.") from exc
+    finally:
+        if hasattr(file_obj, "seek"):
+            file_obj.seek(0)
+
+    return ContentFile(output.getvalue(), name=filename)
+
+
 def validate_secure_video(file_obj: Any) -> None:
     """Validate uploaded video file for size and extension allowlist."""
     if not file_obj:

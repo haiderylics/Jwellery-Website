@@ -20,7 +20,9 @@ def test_cloudinary_storage_uploads_server_generated_key_and_returns_https_url()
     storage = CloudinaryMediaStorage(
         cloud_name="test-cloud", api_key="test-key", api_secret="test-secret"
     )
-    content = BytesIO(b"image bytes")
+    image_buffer = BytesIO()
+    Image.new("RGB", (20, 20), color="gold").save(image_buffer, format="PNG")
+    content = SimpleUploadedFile("source.png", image_buffer.getvalue(), content_type="image/png")
 
     with (
         patch("cloudinary.uploader.upload") as upload,
@@ -36,6 +38,23 @@ def test_cloudinary_storage_uploads_server_generated_key_and_returns_https_url()
     assert upload.call_args.kwargs["resource_type"] == "image"
     assert upload.call_args.kwargs["public_id"] == name
     assert url.startswith("https://")
+
+
+def test_corrupt_image_is_rejected_before_cloudinary_upload() -> None:
+    storage = CloudinaryMediaStorage(
+        cloud_name="test-cloud", api_key="test-key", api_secret="test-secret"
+    )
+
+    with (
+        patch("cloudinary.uploader.upload") as upload,
+        pytest.raises(Exception, match="Corrupted or malicious image"),
+    ):
+        storage._save(
+            "products/images/2026/08/broken.jpg",
+            SimpleUploadedFile("broken.jpg", b"not an image", content_type="image/jpeg"),
+        )
+
+    upload.assert_not_called()
 
 
 def test_cloudinary_storage_uses_video_resource_type_and_deletes_with_invalidation() -> None:
@@ -97,8 +116,11 @@ def test_product_image_uses_django_default_storage_and_cloudinary_url(
     image_buffer = BytesIO()
     Image.new("RGB", (20, 20), color="gold").save(image_buffer, format="JPEG")
     upload_file = SimpleUploadedFile("ring.jpg", image_buffer.getvalue(), content_type="image/jpeg")
-    storages._storages.pop("default", None)
-    monkeypatch.setattr(default_storage, "_wrapped", storages["default"])
+    cloud_storage = CloudinaryMediaStorage(
+        cloud_name="test-cloud", api_key="test-key", api_secret="test-secret"
+    )
+    monkeypatch.setitem(storages._storages, "default", cloud_storage)
+    monkeypatch.setattr(default_storage, "_wrapped", cloud_storage)
 
     category = Category.objects.create(name="Rings", slug="rings")
     product = Product.objects.create(
@@ -106,6 +128,12 @@ def test_product_image_uses_django_default_storage_and_cloudinary_url(
     )
     with (
         patch("cloudinary.uploader.upload") as cloudinary_upload,
+        patch("backend.apps.common.signals.generate_image_variants") as generate_variants,
+        patch.object(
+            CloudinaryMediaStorage,
+            "open",
+            side_effect=AssertionError("Cloudinary media must not be reopened after upload"),
+        ),
         patch(
             "cloudinary.utils.cloudinary_url",
             return_value=("https://res.cloudinary.com/test-cloud/image/upload/ring.jpg", {}),
@@ -116,6 +144,10 @@ def test_product_image_uses_django_default_storage_and_cloudinary_url(
 
     assert product_image.image.name.startswith("products/images/")
     assert cloudinary_upload.call_count == 1
+    generate_variants.assert_not_called()
     assert payload["image_url"].startswith("https://res.cloudinary.com/")
+    assert payload["thumbnail_url"].startswith("https://res.cloudinary.com/")
+    assert payload["medium_url"].startswith("https://res.cloudinary.com/")
+    assert payload["large_url"].startswith("https://res.cloudinary.com/")
     assert "test-key" not in str(payload)
     assert "test-secret" not in str(payload)

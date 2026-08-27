@@ -12,6 +12,7 @@ Architecture Guarantees:
 import logging
 from typing import Any
 
+from django.core.files.storage import default_storage
 from django.db import transaction
 from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
@@ -179,7 +180,11 @@ def handle_image_variant_generation(
         file_name = instance.image.name
 
         def _process_and_clean():
-            generate_image_variants(file_name)
+            # Cloudinary creates CDN variants lazily from the original. Calling
+            # the local pipeline here would require Storage.open() and download
+            # the just-uploaded asset back from the CDN.
+            if not getattr(default_storage, "is_cloudinary_storage", False):
+                generate_image_variants(file_name)
             if old_media and old_media != file_name:
                 cleanup_storage_media(old_media)
 

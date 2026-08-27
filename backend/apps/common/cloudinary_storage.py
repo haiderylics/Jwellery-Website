@@ -73,18 +73,37 @@ class CloudinaryMediaStorage(Storage):
         return name.replace("\\", "/")
 
     def _save(self, name: str, content: Any) -> str:
-        """Upload a file with its server-generated storage key as public ID."""
+        """Validate then upload one privacy-normalized source asset to Cloudinary."""
         name = self.normalize_name(name)
-        content.seek(0)
-        cloudinary.uploader.upload(
-            content,
-            public_id=name,
-            resource_type=self.resource_type(name),
-            overwrite=False,
-            unique_filename=False,
-            use_filename=False,
-        )
+        resource_type = self.resource_type(name)
+        try:
+            if resource_type == "image":
+                # Django model validators run in admin forms, but storage is
+                # also reachable through programmatic Model.save(). Enforce
+                # validation at this final pre-persistence boundary too.
+                from backend.apps.common.media import prepare_secure_image_upload
+
+                content = prepare_secure_image_upload(content)
+            content.seek(0)
+            cloudinary.uploader.upload(
+                content,
+                public_id=name,
+                resource_type=resource_type,
+                overwrite=False,
+                unique_filename=False,
+                use_filename=False,
+            )
+        except ImproperlyConfigured:
+            raise
+        except Exception:
+            # Do not translate transport/API failures into image-corruption
+            # errors. The caller and Railway logs retain the storage failure.
+            raise
         return name
+
+    # ``Storage.open()`` intentionally remains unsupported. Application image
+    # validation and responsive delivery use incoming streams and Cloudinary
+    # transformation URLs, so a remote CDN download is never part of upload.
 
     def delete(self, name: str) -> None:
         if name:

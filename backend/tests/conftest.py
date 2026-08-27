@@ -3,7 +3,7 @@
 from pathlib import Path
 
 import pytest
-from django.core.files.storage import FileSystemStorage, storages
+from django.core.files.storage import FileSystemStorage, default_storage, storages
 from django.test import Client
 
 
@@ -17,6 +17,7 @@ def isolated_media_root(
 
     test_storage = FileSystemStorage(location=str(media_dir))
     monkeypatch.setitem(storages._storages, "default", test_storage)
+    monkeypatch.setattr(default_storage, "_wrapped", test_storage)
 
     return media_dir
 

@@ -85,3 +85,13 @@ def test_production_settings_loads_with_valid_config(monkeypatch: pytest.MonkeyP
     assert prod_settings.SECURE_HSTS_SECONDS == 31536000
     assert prod_settings.DATABASES["default"]["ENGINE"] == "django.db.backends.postgresql"
     assert prod_settings.DATABASES["default"]["NAME"] == "proddb"
+    assert prod_settings.STATIC_URL == "/static/"
+    assert (
+        prod_settings.STORAGES["staticfiles"]["BACKEND"]
+        == "whitenoise.storage.CompressedManifestStaticFilesStorage"
+    )
+    security_middleware = "django.middleware.security.SecurityMiddleware"
+    whitenoise_middleware = "whitenoise.middleware.WhiteNoiseMiddleware"
+    assert prod_settings.MIDDLEWARE.index(whitenoise_middleware) == (
+        prod_settings.MIDDLEWARE.index(security_middleware) + 1
+    )

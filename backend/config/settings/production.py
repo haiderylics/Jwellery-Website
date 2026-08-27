@@ -91,7 +91,18 @@ if os.environ.get("DJANGO_SECURE_PROXY_SSL_HEADER", "").lower() in ("true", "1")
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # ------------------------------------------------------------------------------
-# 5. Database Configuration (PostgreSQL Authoritative in Production)
+# 5. Static files
+# ------------------------------------------------------------------------------
+# WhiteNoise serves only collected application static files. User-uploaded media
+# remains on its separate storage and is never exposed through this middleware.
+STORAGES = {
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+
+# ------------------------------------------------------------------------------
+# 6. Database Configuration (PostgreSQL Authoritative in Production)
 # ------------------------------------------------------------------------------
 database_url = os.environ.get("DATABASE_URL")
 

@@ -361,6 +361,12 @@ Controls:
 
 If future custom dashboard is added, use explicit permissions for every mutation.
 
+The production Admin uses an owner-focused `AdminSite`: catalog, content, offers, and store
+settings remain in normal navigation, while Django's technical auth application and Groups are
+hidden from the dashboard/sidebar. Auth models, permissions, sessions, CSRF, and login behavior
+remain unchanged. Superusers receive a permission-protected **Staff Access** link to the normal
+User admin; hiding navigation never grants or revokes a permission.
+
 DRF permission classes are evaluated before view logic; authorization must never depend solely on URL obfuscation or UI restrictions. source: DRF permissions
 
 ---
@@ -563,7 +569,11 @@ OWASP Top 10:2025 includes Software Supply Chain Failures as A03. source: OWA
 
 ## 20. Caching
 
-Cache only public/read-only data.
+Production currently uses Django `FileBasedCache` at the absolute, ephemeral
+`DJANGO_CACHE_LOCATION` (Railway default `/tmp/ahs-jewellers-cache`). It is deliberately outside
+media/static roots, bounded to 1,500 entries, and is not business data. This is acceptable only
+for the current single-service-replica MVP; move to shared Redis/Memcached before horizontally
+scaling Django replicas. No Railway Volume is required.
 
 Safe candidates:
 
@@ -571,7 +581,7 @@ Safe candidates:
 - public site settings
 - home sections
 - active promotions
-- catalog pages where invalidation is defined
+- product detail payloads (short TTL, versioned product namespace)
 
 Do not publicly cache:
 
@@ -580,6 +590,17 @@ Do not publicly cache:
 - user-specific checkout data
 
 Invalidate relevant cache when admin content changes.
+
+Invalidation is post-commit and scoped to `site`, `catalog/taxonomy`, `product`, `content`,
+`promotions`, `homepage`, and short-lived admin metric/branding keys. Product/variant/image/video
+changes rotate only the product-detail namespace and invalidate affected aggregate keys. Scheduled
+promotion/home payload TTLs never cross the next enabled start/end boundary. Safe public responses
+use conservative `Cache-Control` and ETags; admin, auth, health, mutations, failures, CSRF, and
+session-dependent responses are never page-cached.
+
+The React API client adds a 64-entry, in-memory GET promise cache for site/delivery settings,
+taxonomy, and product detail. It deduplicates concurrent requests, uses 30-60 second TTLs, supports
+explicit invalidation, and discards failed/aborted requests. It stores no data in localStorage.
 
 "Immediately reflect frontend" means API freshness/invalidation, not a browser with stale cache.
 
@@ -620,6 +641,11 @@ CDN / Reverse Proxy
 ```
 
 Do not use Django `runserver` in production.
+
+Netlify's `frontend/public/_redirects` sends `/admin` and `/admin/*` to the Railway Django origin
+with external 302 redirects before the React SPA fallback. Django Admin login, CSRF, sessions,
+static paths, and form POSTs therefore stay entirely on Railway; Netlify never reverse-proxies
+authenticated admin traffic.
 
 Django's deployment checklist explicitly recommends a production WSGI/ASGI server and running `manage.py check --deploy`. source: Django deployment checklist
 

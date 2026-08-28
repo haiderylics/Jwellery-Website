@@ -1,66 +1,73 @@
 {% extends "admin/index.html" %}
-{% load i18n static admin_dashboard_tags %}
+{% load i18n static admin_dashboard_tags log %}
 
 {% block content %}
 {% get_operational_metrics as metrics %}
-
-<!-- Operational KPI Cards -->
-<div class="admin-kpi-grid">
-  <div class="kpi-card">
-    <div class="kpi-icon">&#128142;</div>
-    <div class="kpi-info">
-      <span class="kpi-value">{{ metrics.total_products }}</span>
-      <span class="kpi-label">Total Catalog Pieces</span>
-    </div>
-    <a href="{% url 'admin:catalog_product_changelist' %}" class="kpi-link">Manage &rarr;</a>
+<section class="owner-dashboard" aria-labelledby="dashboard-heading">
+  <div class="dashboard-intro">
+    <p class="dashboard-eyebrow">Storefront overview</p>
+    <h1 id="dashboard-heading">Today at a glance</h1>
   </div>
 
-  <div class="kpi-card">
-    <div class="kpi-icon">&#10004;</div>
-    <div class="kpi-info">
-      <span class="kpi-value kpi-highlight">{{ metrics.published_products }}</span>
-      <span class="kpi-label">Live on Storefront</span>
-    </div>
-    <a href="{% url 'admin:catalog_product_changelist' %}?is_published__exact=1" class="kpi-link">View Live &rarr;</a>
+  <div class="admin-kpi-grid">
+    <article class="kpi-card">
+      <svg class="kpi-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12l3 6-9 12L3 9l3-6Z"/><path d="m3 9 9 3 9-3M8 3l4 9 4-9"/></svg>
+      <div class="kpi-info"><span class="kpi-value">{{ metrics.total_products }}</span><span class="kpi-label">Total Jewellery Pieces</span></div>
+      <a href="{% url 'admin:catalog_product_changelist' %}" class="kpi-link">Manage catalog <span aria-hidden="true">&rarr;</span></a>
+    </article>
+    <article class="kpi-card">
+      <svg class="kpi-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>
+      <div class="kpi-info"><span class="kpi-value kpi-highlight">{{ metrics.published_products }}</span><span class="kpi-label">Live on Storefront</span></div>
+      <a href="{% url 'admin:catalog_product_changelist' %}?is_published__exact=1" class="kpi-link">View live pieces <span aria-hidden="true">&rarr;</span></a>
+    </article>
+    <article class="kpi-card{% if metrics.out_of_stock > 0 %} kpi-warning{% endif %}">
+      <svg class="kpi-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9v4m0 4h.01M10.3 3.8 2.2 18a2 2 0 0 0 1.7 3h16.2a2 2 0 0 0 1.7-3L13.7 3.8a2 2 0 0 0-3.4 0Z"/></svg>
+      <div class="kpi-info"><span class="kpi-value">{{ metrics.out_of_stock }}</span><span class="kpi-label">Out of Stock</span></div>
+      <a href="{% url 'admin:catalog_product_changelist' %}?availability_status__exact=out_of_stock" class="kpi-link">Review stock <span aria-hidden="true">&rarr;</span></a>
+    </article>
+    <article class="kpi-card">
+      <svg class="kpi-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12v9H4v-9M2 7h20v5H2zM12 7v14M12 7H7.5a2.5 2.5 0 1 1 0-5C11 2 12 7 12 7Zm0 0h4.5a2.5 2.5 0 1 0 0-5C13 2 12 7 12 7Z"/></svg>
+      <div class="kpi-info"><span class="kpi-value">{{ metrics.active_promotions }}</span><span class="kpi-label">Active Campaigns</span></div>
+      <a href="{% url 'admin:promotions_promotion_changelist' %}" class="kpi-link">Manage campaigns <span aria-hidden="true">&rarr;</span></a>
+    </article>
+    <article class="kpi-card">
+      <svg class="kpi-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 3.1 6.3L22 9.3l-5 4.9 1.2 6.8-6.2-3.2L5.8 21 7 14.2 2 9.3l6.9-1L12 2Z"/></svg>
+      <div class="kpi-info"><span class="kpi-value">{{ metrics.published_reviews }}</span><span class="kpi-label">Customer Reviews</span></div>
+      <a href="{% url 'admin:content_review_changelist' %}" class="kpi-link">Manage reviews <span aria-hidden="true">&rarr;</span></a>
+    </article>
   </div>
 
-  <div class="kpi-card {% if metrics.out_of_stock > 0 %}kpi-warning{% endif %}">
-    <div class="kpi-icon">&#9888;</div>
-    <div class="kpi-info">
-      <span class="kpi-value">{{ metrics.out_of_stock }}</span>
-      <span class="kpi-label">Out of Stock</span>
-    </div>
-    <a href="{% url 'admin:catalog_product_changelist' %}?stock_status__exact=out_of_stock" class="kpi-link">Review &rarr;</a>
+  <nav class="admin-quick-actions" aria-label="Quick merchandising actions">
+    <span class="quick-actions-title">Quick actions</span>
+    <a href="{% url 'admin:catalog_product_add' %}" class="btn-quick-action">Add Jewellery Piece</a>
+    <a href="{% url 'admin:promotions_promotion_add' %}" class="btn-quick-action">Create Campaign</a>
+    <a href="{% url 'admin:content_galleryitem_add' %}" class="btn-quick-action">Add Gallery Moment</a>
+    <a href="{% url 'admin:settings_sitesettings_changelist' %}" class="btn-quick-action">Store Settings</a>
+    {% if user.is_superuser %}<a href="{% url 'admin:auth_user_changelist' %}" class="btn-quick-action staff-access-link">Staff Access</a>{% endif %}
+  </nav>
+
+  <div class="dashboard-management" aria-label="Management areas">{{ block.super }}</div>
+</section>
+{% endblock %}
+
+{% block sidebar %}
+<aside id="content-related" aria-label="Recent activity">
+  <div class="module" id="recent-actions-module">
+    <h2>{% translate 'Recent activity' %}</h2>
+    {% get_admin_log 6 as admin_log for_user user %}
+    {% if not admin_log %}
+      <p class="admin-empty-state">No recent admin activity yet.</p>
+    {% else %}
+      <ul class="actionlist">
+      {% for entry in admin_log %}
+        <li class="{% if entry.is_addition %}addlink{% endif %}{% if entry.is_change %}changelink{% endif %}{% if entry.is_deletion %}deletelink{% endif %}">
+          <span class="visually-hidden">{% if entry.is_addition %}{% translate 'Added:' %}{% elif entry.is_change %}{% translate 'Changed:' %}{% elif entry.is_deletion %}{% translate 'Deleted:' %}{% endif %}</span>
+          {% if entry.is_deletion or not entry.get_admin_url %}{{ entry.object_repr }}{% else %}<a href="{{ entry.get_admin_url }}">{{ entry.object_repr }}</a>{% endif %}
+          <br>{% if entry.content_type %}<span class="mini quiet">{% filter capfirst %}{{ entry.content_type.name }}{% endfilter %}</span>{% endif %}
+        </li>
+      {% endfor %}
+      </ul>
+    {% endif %}
   </div>
-
-  <div class="kpi-card">
-    <div class="kpi-icon">&#127873;</div>
-    <div class="kpi-info">
-      <span class="kpi-value">{{ metrics.active_promotions }}</span>
-      <span class="kpi-label">Active Campaigns</span>
-    </div>
-    <a href="{% url 'admin:promotions_promotion_changelist' %}" class="kpi-link">Promotions &rarr;</a>
-  </div>
-
-  <div class="kpi-card">
-    <div class="kpi-icon">&#9733;</div>
-    <div class="kpi-info">
-      <span class="kpi-value">{{ metrics.published_reviews }}</span>
-      <span class="kpi-label">Client Reviews</span>
-    </div>
-    <a href="{% url 'admin:content_review_changelist' %}" class="kpi-link">Feedback &rarr;</a>
-  </div>
-</div>
-
-<!-- Quick Action Toolbar -->
-<div class="admin-quick-actions">
-  <span class="quick-actions-title">Quick Merchandising Actions:</span>
-  <a href="{% url 'admin:catalog_product_add' %}" class="btn-quick-action">&#43; Add New Jewellery Piece</a>
-  <a href="{% url 'admin:promotions_promotion_add' %}" class="btn-quick-action">&#43; Create Promotion Banner</a>
-  <a href="{% url 'admin:content_galleryitem_add' %}" class="btn-quick-action">&#43; Upload Gallery Moment</a>
-  <a href="{% url 'admin:settings_sitesettings_changelist' %}" class="btn-quick-action">&#9881; Store &amp; WhatsApp Settings</a>
-</div>
-
-{{ block.super }}
-
+</aside>
 {% endblock %}

@@ -43,9 +43,65 @@ class TestAdminBrandingAndDashboard:
         assert res.status_code == 200
         content = res.content.decode("utf-8")
         assert "admin-kpi-grid" in content
-        assert "Total Catalog Pieces" in content
-        assert "Quick Merchandising Actions" in content
+        assert "Total Jewellery Pieces" in content
+        assert "Quick actions" in content
         assert "View Live Storefront" in content
+        assert "Authentication and Authorization" not in content
+        assert ">Groups<" not in content
+        assert "Staff Access" in content
+        assert "Jewellery Pieces" in content
+        assert "Product images" not in content
+
+    def test_admin_login_submission_and_superuser_staff_access(self):
+        login_response = self.client.post(
+            "/admin/login/",
+            {
+                "username": "admin_qa",
+                "password": "secure_admin_password_123",
+                "next": "/admin/",
+            },
+        )
+        assert login_response.status_code == 302
+        assert login_response.headers["Location"] == "/admin/"
+        assert self.client.get("/admin/auth/user/").status_code == 200
+
+    def test_regular_staff_gets_no_staff_access_or_new_permissions(self):
+        regular_staff = User.objects.create_user(
+            username="owner_editor",
+            password="OwnerEditorPassword123!",
+            is_staff=True,
+            is_superuser=False,
+        )
+        self.client.force_login(regular_staff)
+        dashboard = self.client.get("/admin/")
+        assert dashboard.status_code == 200
+        content = dashboard.content.decode("utf-8")
+        assert "Authentication and Authorization" not in content
+        assert "Staff Access" not in content
+        assert self.client.get("/admin/auth/user/").status_code == 403
+
+    def test_product_admin_renders_django_6_collapses_and_compact_inlines(self):
+        self.client.force_login(self.staff_user)
+        response = self.client.get("/admin/catalog/product/add/")
+        assert response.status_code == 200
+        content = response.content.decode("utf-8")
+        assert 'class="module aligned collapse"' in content
+        assert "<details><summary>" in content
+        assert "Search Engine Optimization (SEO)" in content
+        assert 'id="images-group"' in content
+        assert 'name="images-TOTAL_FORMS" value="0"' in content
+        assert 'data-inline-type="tabular"' in content
+
+    def test_admin_styles_target_native_details_and_shared_layout_tokens(self):
+        css = (
+            __import__("pathlib")
+            .Path("backend/static/admin/css/custom_admin.css")
+            .read_text(encoding="utf-8")
+        )
+        assert "--admin-content-max-width: 1500px" in css
+        assert "fieldset.module.collapse > details > summary" in css
+        assert "repeat(auto-fit, minmax(220px, 1fr))" in css
+        assert "position: sticky" in css
 
     def test_admin_promotions_and_popups_changelist_render_cleanly(self):
         from backend.apps.promotions.models import Popup, Promotion

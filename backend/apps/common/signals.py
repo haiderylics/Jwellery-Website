@@ -27,6 +27,9 @@ from backend.apps.catalog.models import (
     ProductVideo,
 )
 from backend.apps.common.cache_utils import (
+    CACHE_KEY_ABOUT,
+    CACHE_KEY_ADMIN_BRANDING,
+    CACHE_KEY_ADMIN_METRICS,
     CACHE_KEY_ATTRIBUTES,
     CACHE_KEY_CATEGORIES,
     CACHE_KEY_DELIVERY_SETTINGS,
@@ -36,6 +39,7 @@ from backend.apps.common.cache_utils import (
     CACHE_KEY_PROMOTIONS_ACTIVE,
     CACHE_KEY_REVIEWS,
     CACHE_KEY_SITE_SETTINGS,
+    invalidate_product_cache,
     invalidate_storefront_cache,
 )
 from backend.apps.common.media import cleanup_storage_media, generate_image_variants
@@ -50,9 +54,15 @@ logger = logging.getLogger(__name__)
 # --------------------------------------------------------------------------
 
 
-def _schedule_cache_invalidation(keys: list[str]) -> None:
+def _schedule_cache_invalidation(keys: list[str], *, products: bool = False) -> None:
     """Schedule storefront cache invalidation on transaction commit."""
-    transaction.on_commit(lambda: invalidate_storefront_cache(keys))
+
+    def _invalidate() -> None:
+        invalidate_storefront_cache(keys)
+        if products:
+            invalidate_product_cache()
+
+    transaction.on_commit(_invalidate)
 
 
 @receiver([post_save, post_delete], sender=Category)
@@ -64,7 +74,14 @@ def _schedule_cache_invalidation(keys: list[str]) -> None:
 @receiver([post_save, post_delete], sender=ProductAttributeValue)
 def invalidate_catalog_cache(sender: Any, **kwargs: Any) -> None:
     """Invalidate catalog and homepage cache when products or categories change."""
-    _schedule_cache_invalidation([CACHE_KEY_HOMEPAGE, CACHE_KEY_CATEGORIES, CACHE_KEY_ATTRIBUTES])
+    keys = [CACHE_KEY_HOMEPAGE]
+    if sender in {Category, Product}:
+        keys.append(CACHE_KEY_CATEGORIES)
+    if sender in {ProductAttributeType, ProductAttributeValue}:
+        keys.append(CACHE_KEY_ATTRIBUTES)
+    if sender is Product:
+        keys.append(CACHE_KEY_ADMIN_METRICS)
+    _schedule_cache_invalidation(keys, products=True)
 
 
 @receiver([post_save, post_delete], sender=Review)
@@ -72,16 +89,23 @@ def invalidate_catalog_cache(sender: Any, **kwargs: Any) -> None:
 @receiver([post_save, post_delete], sender=AboutSection)
 def invalidate_content_cache(sender: Any, **kwargs: Any) -> None:
     """Invalidate content and homepage cache when reviews, gallery, or about sections change."""
-    _schedule_cache_invalidation([CACHE_KEY_HOMEPAGE, CACHE_KEY_REVIEWS, CACHE_KEY_GALLERY])
+    keys = [CACHE_KEY_HOMEPAGE]
+    if sender is Review:
+        keys.extend([CACHE_KEY_REVIEWS, CACHE_KEY_ADMIN_METRICS])
+    elif sender is GalleryItem:
+        keys.append(CACHE_KEY_GALLERY)
+    elif sender is AboutSection:
+        keys.append(CACHE_KEY_ABOUT)
+    _schedule_cache_invalidation(keys)
 
 
 @receiver([post_save, post_delete], sender=Promotion)
 @receiver([post_save, post_delete], sender=Popup)
 def invalidate_promotions_cache(sender: Any, **kwargs: Any) -> None:
     """Invalidate active promotions and homepage cache."""
-    _schedule_cache_invalidation(
-        [CACHE_KEY_HOMEPAGE, CACHE_KEY_PROMOTIONS_ACTIVE, CACHE_KEY_POPUPS_ACTIVE]
-    )
+    keys = [CACHE_KEY_HOMEPAGE, CACHE_KEY_ADMIN_METRICS]
+    keys.append(CACHE_KEY_PROMOTIONS_ACTIVE if sender is Promotion else CACHE_KEY_POPUPS_ACTIVE)
+    _schedule_cache_invalidation(keys)
 
 
 @receiver([post_save, post_delete], sender=SiteSettings)
@@ -89,9 +113,14 @@ def invalidate_promotions_cache(sender: Any, **kwargs: Any) -> None:
 @receiver([post_save, post_delete], sender=SocialLink)
 def invalidate_settings_cache(sender: Any, **kwargs: Any) -> None:
     """Invalidate settings and homepage cache."""
-    _schedule_cache_invalidation(
-        [CACHE_KEY_HOMEPAGE, CACHE_KEY_SITE_SETTINGS, CACHE_KEY_DELIVERY_SETTINGS]
-    )
+    keys = [CACHE_KEY_HOMEPAGE]
+    if sender in {SiteSettings, SocialLink}:
+        keys.append(CACHE_KEY_SITE_SETTINGS)
+    if sender is DeliverySettings:
+        keys.append(CACHE_KEY_DELIVERY_SETTINGS)
+    if sender is SiteSettings:
+        keys.append(CACHE_KEY_ADMIN_BRANDING)
+    _schedule_cache_invalidation(keys)
 
 
 # --------------------------------------------------------------------------

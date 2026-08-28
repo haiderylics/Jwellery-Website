@@ -30,6 +30,20 @@ export const ActivePopupModal: React.FC<ActivePopupModalProps> = ({ popup, onNav
     return () => clearTimeout(timer);
   }, [popup]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsOpen(false);
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [isOpen]);
+
   if (!isOpen || !popup) return null;
 
   const handleCta = () => {
@@ -50,6 +64,7 @@ export const ActivePopupModal: React.FC<ActivePopupModalProps> = ({ popup, onNav
       role="dialog"
       aria-modal="true"
       aria-labelledby="popup-title"
+      aria-describedby="popup-message"
     >
       <div className="popup-modal-content" onClick={(e) => e.stopPropagation()}>
         <button
@@ -57,6 +72,7 @@ export const ActivePopupModal: React.FC<ActivePopupModalProps> = ({ popup, onNav
           className="popup-close-btn"
           onClick={() => setIsOpen(false)}
           aria-label="Close special announcement"
+          autoFocus
         >
           <X size={20} />
         </button>
@@ -78,7 +94,7 @@ export const ActivePopupModal: React.FC<ActivePopupModalProps> = ({ popup, onNav
             <span>SPECIAL INVITATION</span>
           </div>
           <h2 id="popup-title" className="popup-title">{popup.title}</h2>
-          <p className="popup-message">{popup.message}</p>
+          <p id="popup-message" className="popup-message">{popup.message}</p>
 
           <div className="popup-actions">
             {popup.cta_label ? (

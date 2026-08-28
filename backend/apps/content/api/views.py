@@ -6,12 +6,13 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from backend.apps.common.api.cache import PublicCacheControlMixin
 from backend.apps.content.models import AboutSection, GalleryItem, Review
 
 from .serializers import AboutSectionSerializer, GalleryItemSerializer, ReviewSerializer
 
 
-class ReviewListView(generics.ListAPIView):
+class ReviewListView(PublicCacheControlMixin, generics.ListAPIView):
     """Public read-only customer reviews list."""
 
     permission_classes = [AllowAny]
@@ -22,7 +23,7 @@ class ReviewListView(generics.ListAPIView):
         return Review.objects.filter(is_published=True).order_by("sort_priority", "-created_at")
 
 
-class GalleryItemListView(generics.ListAPIView):
+class GalleryItemListView(PublicCacheControlMixin, generics.ListAPIView):
     """Public read-only gallery moment listing with optional item_type filter."""
 
     permission_classes = [AllowAny]
@@ -37,7 +38,7 @@ class GalleryItemListView(generics.ListAPIView):
         return qs.order_by("sort_priority", "-created_at")
 
 
-class AboutSectionView(APIView):
+class AboutSectionView(PublicCacheControlMixin, APIView):
     """Public read-only about section brand narrative."""
 
     permission_classes = [AllowAny]

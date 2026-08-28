@@ -5,6 +5,8 @@ and enforces zero-fallback security invariants.
 """
 
 import os
+from pathlib import Path
+from tempfile import gettempdir
 from urllib.parse import urlparse
 
 from django.core.exceptions import ImproperlyConfigured
@@ -133,6 +135,7 @@ if database_url:
             "CONN_HEALTH_CHECKS": True,
         }
     }
+
 else:
     # Check explicit DB environment variables
     pg_db = os.environ.get("POSTGRES_DB")
@@ -159,3 +162,44 @@ else:
             "CONN_HEALTH_CHECKS": True,
         }
     }
+
+# ------------------------------------------------------------------------------
+# 7. Production cache (ephemeral, single-replica MVP)
+# ------------------------------------------------------------------------------
+platform_cache_default = (
+    "/tmp/ahs-jewellers-cache"  # nosec B108  # noqa: S108
+    if os.name != "nt"
+    else str(Path(gettempdir()) / "ahs-jewellers-cache")
+)
+cache_location = Path(os.environ.get("DJANGO_CACHE_LOCATION", platform_cache_default)).expanduser()
+if not cache_location.is_absolute():
+    raise ImproperlyConfigured("DJANGO_CACHE_LOCATION must be an absolute filesystem path.")
+
+resolved_cache_location = cache_location.resolve()
+for protected_root_name, protected_root in (
+    ("MEDIA_ROOT", Path(MEDIA_ROOT).resolve()),  # noqa: F405
+    ("STATIC_ROOT", Path(STATIC_ROOT).resolve()),  # noqa: F405
+):
+    if resolved_cache_location == protected_root or resolved_cache_location.is_relative_to(
+        protected_root
+    ):
+        raise ImproperlyConfigured(
+            f"DJANGO_CACHE_LOCATION must not be inside {protected_root_name}."
+        )
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.filebased.FileBasedCache",
+        "LOCATION": str(resolved_cache_location),
+        "TIMEOUT": 300,
+        "KEY_PREFIX": "ahs-jewellers",
+        "VERSION": 1,
+        "OPTIONS": {"MAX_ENTRIES": 1500, "CULL_FREQUENCY": 3},
+    }
+}
+
+PUBLIC_PRODUCT_CACHE_TIMEOUT = 60
+PUBLIC_SITE_CACHE_TIMEOUT = 300
+PUBLIC_TAXONOMY_CACHE_TIMEOUT = 300
+PUBLIC_PROMOTION_CACHE_TIMEOUT = 300
+ADMIN_DASHBOARD_CACHE_TIMEOUT = 60

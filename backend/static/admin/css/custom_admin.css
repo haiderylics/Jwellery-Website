@@ -3,14 +3,35 @@
    ============================================================================== */
 
 :root {
+  --admin-content-max-width: 1500px;
+  --admin-space-1: 0.25rem;
+  --admin-space-2: 0.5rem;
+  --admin-space-3: 0.75rem;
+  --admin-space-4: 1rem;
+  --admin-space-5: 1.25rem;
+  --admin-space-6: 1.5rem;
+  --admin-space-8: 2rem;
+  --admin-radius-sm: 4px;
+  --admin-radius-md: 8px;
+  --admin-radius-lg: 12px;
+  --admin-border: #3A352C;
+  --admin-border-subtle: #27231D;
+  --admin-gold: #D1B27C;
+  --admin-gold-strong: #E0C58F;
+  --admin-surface: #1A1916;
+  --admin-surface-raised: #211F1A;
+  --admin-canvas: #0D0C0A;
+  --admin-text: #F9F6F0;
+  --admin-muted: #B8B0A4;
+  --admin-focus: #F0CE91;
   --color-obsidian: #0D0C0A;
   --color-soft-black: #141311;
   --color-card-bg: #1A1916;
   --color-surface-hover: #24221D;
-  --color-border: #322E26;
-  --color-border-subtle: #22201B;
-  --color-gold: #C5A880;
-  --color-gold-hover: #D4AF37;
+  --color-border: var(--admin-border);
+  --color-border-subtle: var(--admin-border-subtle);
+  --color-gold: var(--admin-gold);
+  --color-gold-hover: var(--admin-gold-strong);
   --color-gold-light: #E6D5B8;
   --color-gold-glow: rgba(197, 168, 128, 0.15);
   --color-warm-white: #F9F6F0;
@@ -48,6 +69,12 @@ a:link, a:visited {
 a:hover, a:focus {
   color: var(--color-gold-hover) !important;
   text-decoration: none;
+}
+
+:where(a, button, input, select, textarea, summary):focus-visible {
+  outline: 3px solid var(--admin-focus) !important;
+  outline-offset: 2px !important;
+  box-shadow: none !important;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -785,5 +812,358 @@ body.login .submit-row input {
 @media (max-width: 480px) {
   .admin-kpi-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ========================================================================== */
+/* Django 6 owner-console layout and native component reconciliation           */
+/* ========================================================================== */
+
+#content {
+  width: min(100%, var(--admin-content-max-width)) !important;
+  max-width: var(--admin-content-max-width) !important;
+  margin-inline: auto !important;
+  padding: var(--admin-space-6) clamp(var(--admin-space-4), 2.5vw, var(--admin-space-8)) !important;
+}
+
+.dashboard #content {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+  align-items: start;
+  gap: var(--admin-space-6);
+}
+
+.owner-dashboard,
+.dashboard-management,
+.dashboard-management #content-main {
+  min-width: 0;
+  width: 100%;
+}
+
+.dashboard-intro {
+  margin-bottom: var(--admin-space-5);
+}
+
+.dashboard-intro h1 {
+  margin: 0 !important;
+  color: var(--admin-text) !important;
+  font-family: var(--font-serif) !important;
+  font-size: clamp(1.45rem, 2.5vw, 2rem) !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.02em;
+}
+
+.dashboard-eyebrow {
+  margin: 0 0 var(--admin-space-1) !important;
+  color: var(--admin-gold) !important;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.admin-kpi-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--admin-space-4);
+  margin-bottom: var(--admin-space-5);
+}
+
+.kpi-card {
+  min-height: 190px;
+  padding: var(--admin-space-5);
+  border-radius: var(--admin-radius-md);
+}
+
+.kpi-icon {
+  width: 24px;
+  height: 24px;
+  margin-bottom: var(--admin-space-3);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.admin-quick-actions {
+  padding: var(--admin-space-4);
+  gap: var(--admin-space-2);
+  border-radius: var(--admin-radius-md);
+}
+
+.quick-actions-title {
+  flex-basis: 100%;
+  margin: 0 0 var(--admin-space-1);
+}
+
+.btn-quick-action {
+  min-height: 38px;
+  padding: var(--admin-space-2) var(--admin-space-4);
+  border-radius: var(--admin-radius-sm);
+}
+
+.staff-access-link {
+  margin-left: auto;
+}
+
+.dashboard-management .app-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--admin-space-4);
+}
+
+.dashboard-management .module {
+  margin: 0 !important;
+}
+
+.dashboard #content-related {
+  float: none !important;
+  width: auto !important;
+  margin: 0 !important;
+  position: sticky;
+  top: var(--admin-space-4);
+}
+
+#recent-actions-module .actionlist {
+  padding: var(--admin-space-2) var(--admin-space-5) var(--admin-space-4) !important;
+}
+
+#recent-actions-module .actionlist li {
+  padding-block: var(--admin-space-3);
+  color: var(--admin-text);
+  border-bottom: 1px solid var(--admin-border-subtle);
+  overflow-wrap: anywhere;
+}
+
+.admin-empty-state {
+  margin: 0 !important;
+  padding: var(--admin-space-5) !important;
+  color: var(--admin-muted) !important;
+}
+
+/* Django 6 emits: fieldset.module.collapse > details > summary > heading. */
+fieldset.module {
+  padding: 0 !important;
+  border-radius: var(--admin-radius-md) !important;
+}
+
+fieldset.module > .fieldset-heading,
+fieldset.module > details > summary {
+  margin: 0 !important;
+}
+
+fieldset.module > .fieldset-heading {
+  padding: var(--admin-space-4) var(--admin-space-5) !important;
+  border-bottom: 1px solid var(--admin-border) !important;
+}
+
+fieldset.module.collapse > details > summary {
+  display: flex !important;
+  min-height: 48px;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--admin-space-3);
+  padding: var(--admin-space-3) var(--admin-space-5) !important;
+  color: var(--admin-gold) !important;
+  background: var(--admin-surface-raised) !important;
+  border-left: 3px solid var(--admin-gold) !important;
+  cursor: pointer;
+  list-style: none;
+}
+
+fieldset.module.collapse > details > summary::-webkit-details-marker {
+  display: none;
+}
+
+fieldset.module.collapse > details > summary::after {
+  content: "";
+  width: 0.55rem;
+  height: 0.55rem;
+  flex: 0 0 auto;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg) translateY(-2px);
+  transition: transform 150ms ease;
+}
+
+fieldset.module.collapse > details[open] > summary {
+  border-bottom: 1px solid var(--admin-border) !important;
+}
+
+fieldset.module.collapse > details[open] > summary::after {
+  transform: rotate(225deg) translate(-2px, -2px);
+}
+
+fieldset.module.collapse > details > summary .fieldset-heading {
+  flex: 1;
+  padding: 0 !important;
+  margin: 0 !important;
+  color: inherit !important;
+  background: transparent !important;
+  border: 0 !important;
+  font-size: 0.9rem !important;
+  line-height: 1.35;
+}
+
+fieldset.module .description,
+fieldset.module .form-row {
+  padding-inline: var(--admin-space-5) !important;
+}
+
+fieldset.module .description {
+  padding-top: var(--admin-space-4) !important;
+  color: var(--admin-muted) !important;
+  line-height: 1.6;
+}
+
+.aligned .form-row > div {
+  max-width: 920px;
+}
+
+.aligned .form-row label:not(.vCheckboxLabel) {
+  width: clamp(150px, 18vw, 220px) !important;
+  padding-right: var(--admin-space-4) !important;
+}
+
+.aligned input[type="text"],
+.aligned input[type="password"],
+.aligned input[type="email"],
+.aligned input[type="url"],
+.aligned input[type="tel"] {
+  width: min(100%, 640px) !important;
+}
+
+.aligned textarea {
+  width: min(100%, 700px) !important;
+  min-height: 110px;
+  resize: vertical;
+}
+
+.aligned select {
+  width: min(100%, 440px) !important;
+  min-height: 40px;
+}
+
+.aligned input[type="number"],
+.aligned .vIntegerField,
+.aligned .vDecimalField {
+  width: min(100%, 190px) !important;
+}
+
+input:disabled,
+select:disabled,
+textarea:disabled,
+.readonly {
+  color: var(--admin-muted) !important;
+  opacity: 0.85;
+}
+
+.errornote,
+.errorlist {
+  color: #FFB4AB !important;
+}
+
+.inline-group {
+  overflow-x: auto;
+  border-radius: var(--admin-radius-md) !important;
+}
+
+.inline-group table {
+  min-width: 760px;
+}
+
+.inline-group .delete {
+  border-left: 1px solid var(--admin-border) !important;
+  background: rgba(229, 57, 53, 0.06) !important;
+}
+
+.admin-product-thumbnail {
+  display: block;
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius-sm);
+  background: var(--admin-canvas);
+}
+
+.submit-row {
+  position: sticky;
+  z-index: 20;
+  bottom: var(--admin-space-2);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  padding: var(--admin-space-3) var(--admin-space-4) !important;
+  border-radius: var(--admin-radius-md) !important;
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.submit-row p.deletelink-box {
+  margin-right: auto !important;
+}
+
+@media (max-width: 1024px) {
+  .dashboard #content {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dashboard #content-related {
+    position: static;
+  }
+
+  .admin-kpi-grid,
+  .dashboard-management .app-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  #content {
+    padding: var(--admin-space-4) !important;
+  }
+
+  .aligned .form-row label:not(.vCheckboxLabel) {
+    display: block;
+    width: auto !important;
+    padding: 0 0 var(--admin-space-2) !important;
+  }
+
+  .submit-row {
+    bottom: 0;
+  }
+}
+
+@media (max-width: 520px) {
+  .admin-kpi-grid,
+  .dashboard-management .app-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .staff-access-link {
+    margin-left: 0;
+  }
+
+  .btn-quick-action,
+  .submit-row input,
+  .submit-row a {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .submit-row p.deletelink-box {
+    width: 100%;
+    margin: 0 !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

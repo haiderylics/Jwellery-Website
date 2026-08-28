@@ -5,6 +5,14 @@ from django.db.models import Count, QuerySet
 from django.http import HttpRequest
 from django.utils.html import format_html
 
+from backend.apps.common.cache_utils import (
+    CACHE_KEY_ADMIN_METRICS,
+    CACHE_KEY_CATEGORIES,
+    CACHE_KEY_HOMEPAGE,
+    invalidate_product_cache,
+    invalidate_storefront_cache,
+)
+
 from .models import (
     Category,
     Product,
@@ -96,9 +104,23 @@ class ProductImageInline(admin.TabularInline):
     """Inline manager for product images."""
 
     model = ProductImage
-    extra = 1
-    fields = ["image", "is_primary", "alt_text", "sort_order"]
+    extra = 0
+    fields = ["image_preview", "image", "is_primary", "alt_text", "sort_order"]
+    readonly_fields = ["image_preview"]
     ordering = ["sort_order", "-is_primary"]
+
+    @admin.display(description="Current photo")
+    def image_preview(self, obj: ProductImage) -> str:
+        if not obj or not obj.image:
+            return "No photo uploaded"
+        try:
+            image_url = obj.image.url
+        except (AttributeError, ValueError):
+            return "Preview unavailable"
+        return format_html(
+            '<img src="{}" alt="" loading="lazy" class="admin-product-thumbnail">',
+            image_url,
+        )
 
 
 class ProductVideoInline(admin.StackedInline):
@@ -209,12 +231,7 @@ class ProductAdmin(admin.ModelAdmin):
     ]
 
     def get_queryset(self, request: HttpRequest) -> QuerySet:
-        return (
-            super()
-            .get_queryset(request)
-            .select_related("category")
-            .prefetch_related("images", "variants", "attributes")
-        )
+        return super().get_queryset(request).select_related("category").prefetch_related("variants")
 
     @admin.display(description="Base Price", ordering="base_price")
     def formatted_base_price(self, obj: Product) -> str:
@@ -223,39 +240,52 @@ class ProductAdmin(admin.ModelAdmin):
     @admin.display(description="Total Stock")
     def effective_stock_display(self, obj: Product) -> str:
         stock = obj.effective_stock
-        if obj.variants.exists():
+        if obj.has_variants:
             return format_html("<strong>{}</strong> <em>(via variants)</em>", stock)
         return str(stock)
+
+    @staticmethod
+    def _invalidate_bulk_product_changes() -> None:
+        invalidate_product_cache()
+        invalidate_storefront_cache(
+            [CACHE_KEY_HOMEPAGE, CACHE_KEY_CATEGORIES, CACHE_KEY_ADMIN_METRICS]
+        )
 
     # Safe Admin Bulk Actions
     @admin.action(description="Publish selected products", permissions=["change"])
     def make_published(self, request: HttpRequest, queryset: QuerySet) -> None:
         updated = queryset.update(is_published=True)
+        self._invalidate_bulk_product_changes()
         self.message_user(request, f"{updated} product(s) marked as published.", messages.SUCCESS)
 
     @admin.action(description="Unpublish selected products (Draft)", permissions=["change"])
     def make_unpublished(self, request: HttpRequest, queryset: QuerySet) -> None:
         updated = queryset.update(is_published=False)
+        self._invalidate_bulk_product_changes()
         self.message_user(request, f"{updated} product(s) marked as unpublished.", messages.SUCCESS)
 
     @admin.action(description="Feature selected products on Homepage", permissions=["change"])
     def mark_featured(self, request: HttpRequest, queryset: QuerySet) -> None:
         updated = queryset.update(is_featured=True)
+        self._invalidate_bulk_product_changes()
         self.message_user(request, f"{updated} product(s) marked as featured.", messages.SUCCESS)
 
     @admin.action(description="Remove selected products from Featured", permissions=["change"])
     def unmark_featured(self, request: HttpRequest, queryset: QuerySet) -> None:
         updated = queryset.update(is_featured=False)
+        self._invalidate_bulk_product_changes()
         self.message_user(request, f"{updated} product(s) removed from featured.", messages.SUCCESS)
 
     @admin.action(description="Mark selected products as New Arrival", permissions=["change"])
     def mark_new_arrival(self, request: HttpRequest, queryset: QuerySet) -> None:
         updated = queryset.update(is_new_arrival=True)
+        self._invalidate_bulk_product_changes()
         self.message_user(request, f"{updated} product(s) marked as new arrival.", messages.SUCCESS)
 
     @admin.action(description="Remove selected products from New Arrival", permissions=["change"])
     def unmark_new_arrival(self, request: HttpRequest, queryset: QuerySet) -> None:
         updated = queryset.update(is_new_arrival=False)
+        self._invalidate_bulk_product_changes()
         self.message_user(
             request, f"{updated} product(s) removed from new arrival.", messages.SUCCESS
         )

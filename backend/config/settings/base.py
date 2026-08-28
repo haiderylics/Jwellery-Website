@@ -11,7 +11,7 @@ BACKEND_DIR = BASE_DIR / "backend"
 
 # Application definition
 DJANGO_APPS = [
-    "django.contrib.admin",
+    "backend.apps.common.admin_config.OwnerAdminConfig",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",

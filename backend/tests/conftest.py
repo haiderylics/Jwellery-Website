@@ -3,8 +3,17 @@
 from pathlib import Path
 
 import pytest
+from django.core.cache import cache
 from django.core.files.storage import FileSystemStorage, default_storage, storages
 from django.test import Client
+
+
+@pytest.fixture(autouse=True)
+def isolated_cache() -> None:
+    """Prevent cached public/admin payloads leaking between otherwise isolated tests."""
+    cache.clear()
+    yield
+    cache.clear()
 
 
 @pytest.fixture(autouse=True)

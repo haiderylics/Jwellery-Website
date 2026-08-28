@@ -1,8 +1,12 @@
 """Template tags for custom Django Admin operational dashboard."""
 
 from django import template
+from django.conf import settings
+from django.core.cache import cache
+from django.db.models import Count, Q
 
 from backend.apps.catalog.models import Product
+from backend.apps.common.cache_utils import CACHE_KEY_ADMIN_BRANDING, CACHE_KEY_ADMIN_METRICS
 from backend.apps.content.models import Review
 from backend.apps.promotions.models import Promotion
 from backend.apps.settings.models import SiteSettings
@@ -13,20 +17,33 @@ register = template.Library()
 @register.simple_tag
 def get_site_branding() -> dict:
     """Fetch the active configured brand name, monogram, and tagline for Django Admin templates."""
+    cached_branding = cache.get(CACHE_KEY_ADMIN_BRANDING)
+    if cached_branding is not None:
+        return cached_branding
     try:
-        settings = SiteSettings.objects.first()
-        brand_name = settings.brand_name if (settings and settings.brand_name) else "AHS JEWELLERS"
+        site_settings = SiteSettings.objects.first()
+        brand_name = (
+            site_settings.brand_name
+            if (site_settings and site_settings.brand_name)
+            else "AHS JEWELLERS"
+        )
         monogram = brand_name.strip()[:1].upper() if brand_name else "A"
         tagline = (
-            settings.tagline
-            if (settings and settings.tagline)
+            site_settings.tagline
+            if (site_settings and site_settings.tagline)
             else "Operations & Merchandising Console"
         )
-        return {
+        branding = {
             "brand_name": brand_name,
             "monogram": monogram,
             "tagline": tagline,
         }
+        cache.set(
+            CACHE_KEY_ADMIN_BRANDING,
+            branding,
+            timeout=getattr(settings, "ADMIN_DASHBOARD_CACHE_TIMEOUT", 60),
+        )
+        return branding
     except Exception:
         return {
             "brand_name": "AHS JEWELLERS",
@@ -38,22 +55,29 @@ def get_site_branding() -> dict:
 @register.simple_tag
 def get_operational_metrics() -> dict:
     """Fetch lightweight operational counts for the admin dashboard."""
+    cached_metrics = cache.get(CACHE_KEY_ADMIN_METRICS)
+    if cached_metrics is not None:
+        return cached_metrics
     try:
-        total_products = Product.objects.count()
-        published_products = Product.objects.filter(is_published=True).count()
-        out_of_stock = Product.objects.filter(
-            is_published=True, availability_status="out_of_stock"
-        ).count()
-        active_promotions = Promotion.objects.filter(is_active=True).count()
-        published_reviews = Review.objects.filter(is_published=True).count()
-
-        return {
-            "total_products": total_products,
-            "published_products": published_products,
-            "out_of_stock": out_of_stock,
-            "active_promotions": active_promotions,
-            "published_reviews": published_reviews,
+        product_counts = Product.objects.aggregate(
+            total_products=Count("id"),
+            published_products=Count("id", filter=Q(is_published=True)),
+            out_of_stock=Count(
+                "id",
+                filter=Q(is_published=True, availability_status="out_of_stock"),
+            ),
+        )
+        metrics = {
+            **product_counts,
+            "active_promotions": Promotion.objects.active_now().count(),
+            "published_reviews": Review.objects.filter(is_published=True).count(),
         }
+        cache.set(
+            CACHE_KEY_ADMIN_METRICS,
+            metrics,
+            timeout=getattr(settings, "ADMIN_DASHBOARD_CACHE_TIMEOUT", 60),
+        )
+        return metrics
     except Exception:
         return {
             "total_products": 0,

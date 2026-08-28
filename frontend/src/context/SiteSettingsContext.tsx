@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { DeliverySettings, SiteSettings, SocialLink } from "@/types/api";
-import { api } from "@/services/api";
+import { api, invalidateApiGetCache } from "@/services/api";
 
 export interface SiteSettingsContextValue {
   settings: SiteSettings | null;
@@ -37,7 +37,11 @@ export const SiteSettingsProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [deliverySettings, setDeliverySettings] = useState<DeliverySettings | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  const fetchSettings = async () => {
+  const fetchSettings = async (force = false) => {
+    if (force) {
+      invalidateApiGetCache("/site-settings/");
+      invalidateApiGetCache("/delivery-settings/");
+    }
     try {
       const [siteData, delData] = await Promise.all([
         api.getSiteSettings(),
@@ -82,7 +86,7 @@ export const SiteSettingsProvider: React.FC<{ children: React.ReactNode }> = ({ 
         socialLinks,
         canonicalUrl,
         isLoading,
-        refreshSettings: fetchSettings,
+        refreshSettings: () => fetchSettings(true),
       }}
     >
       {children}

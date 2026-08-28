@@ -1,0 +1,3 @@
+/admin https://jwellery-website-production.up.railway.app/admin/ 302
+/admin/* https://jwellery-website-production.up.railway.app/admin/:splat 302
+/* /index.html 200

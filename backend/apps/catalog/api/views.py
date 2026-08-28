@@ -1,11 +1,19 @@
 """Views for catalog public storefront APIs."""
 
+from django.conf import settings
+from django.core.cache import cache
 from django.db.models import Count, Q, QuerySet
 from rest_framework import generics
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 
 from backend.apps.catalog.models import Category, Product, ProductAttributeType
+from backend.apps.common.api.cache import PublicCacheControlMixin, public_response
+from backend.apps.common.cache_utils import (
+    CACHE_KEY_ATTRIBUTES,
+    CACHE_KEY_CATEGORIES,
+    product_detail_cache_key,
+)
 
 from .serializers import (
     CategorySerializer,
@@ -23,12 +31,13 @@ ORDERING_MAP = {
 }
 
 
-class ProductListView(generics.ListAPIView):
+class ProductListView(PublicCacheControlMixin, generics.ListAPIView):
     """Public read-only product catalog listing with bounded filtering and search."""
 
     permission_classes = [AllowAny]
     serializer_class = ProductListSerializer
     http_method_names = ["get", "head", "options"]
+    cache_control_max_age = 15
 
     def get_queryset(self) -> QuerySet:
         qs = (
@@ -91,6 +100,17 @@ class ProductDetailView(generics.RetrieveAPIView):
             .prefetch_related("images", "variants", "attributes__attribute_type")
         )
 
+    def retrieve(self, request: Request, *args, **kwargs):
+        slug = self.kwargs[self.lookup_url_kwarg]
+        cache_key = product_detail_cache_key(slug)
+        payload = cache.get(cache_key)
+        timeout = getattr(settings, "PUBLIC_PRODUCT_CACHE_TIMEOUT", 60)
+        if payload is None:
+            instance = self.get_object()
+            payload = self.get_serializer(instance).data
+            cache.set(cache_key, payload, timeout=timeout)
+        return public_response(request, payload, max_age=min(15, timeout))
+
 
 class CategoryListView(generics.ListAPIView):
     """Public read-only listing of active product categories."""
@@ -107,6 +127,14 @@ class CategoryListView(generics.ListAPIView):
             .order_by("sort_order", "name")
         )
 
+    def list(self, request: Request, *args, **kwargs):
+        payload = cache.get(CACHE_KEY_CATEGORIES)
+        timeout = getattr(settings, "PUBLIC_TAXONOMY_CACHE_TIMEOUT", 300)
+        if payload is None:
+            payload = self.get_serializer(self.get_queryset(), many=True).data
+            cache.set(CACHE_KEY_CATEGORIES, payload, timeout=timeout)
+        return public_response(request, payload, max_age=min(60, timeout))
+
 
 class AttributeTypeListView(generics.ListAPIView):
     """Public read-only listing of attribute types and their discrete values."""
@@ -120,3 +148,11 @@ class AttributeTypeListView(generics.ListAPIView):
         return ProductAttributeType.objects.prefetch_related("values").order_by(
             "sort_order", "name"
         )
+
+    def list(self, request: Request, *args, **kwargs):
+        payload = cache.get(CACHE_KEY_ATTRIBUTES)
+        timeout = getattr(settings, "PUBLIC_TAXONOMY_CACHE_TIMEOUT", 300)
+        if payload is None:
+            payload = self.get_serializer(self.get_queryset(), many=True).data
+            cache.set(CACHE_KEY_ATTRIBUTES, payload, timeout=timeout)
+        return public_response(request, payload, max_age=min(60, timeout))

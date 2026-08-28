@@ -17,8 +17,10 @@ import {
   Review,
   SiteSettings,
 } from "@/types/api";
+import { GetRequestCache } from "./requestCache";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api/v1";
+const getRequestCache = new GetRequestCache({ maxEntries: 64, ttlMs: 30_000 });
 
 export class ApiClientError extends Error {
   code: string;
@@ -83,6 +85,15 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   }
 }
 
+function cachedGet<T>(endpoint: string, ttlMs?: number): Promise<T> {
+  return getRequestCache.get(endpoint, () => request<T>(endpoint, { method: "GET" }), ttlMs);
+}
+
+export function invalidateApiGetCache(endpoint?: string): void {
+  if (endpoint) getRequestCache.invalidate(endpoint);
+  else getRequestCache.clear();
+}
+
 export const api = {
   getHomepage: (): Promise<HomepagePayload> => request<HomepagePayload>("/home/"),
 
@@ -112,12 +123,15 @@ export const api = {
     return request<PaginatedResponse<ProductListItem>>(`/products/${queryString ? `?${queryString}` : ""}`);
   },
 
-  getProductDetail: (slug: string): Promise<ProductDetail> =>
-    request<ProductDetail>(`/products/${encodeURIComponent(slug)}/`),
+  getProductDetail: (slug: string): Promise<ProductDetail> => {
+    const endpoint = `/products/${encodeURIComponent(slug)}/`;
+    return cachedGet<ProductDetail>(endpoint, 30_000);
+  },
 
-  getCategories: (): Promise<Category[]> => request<Category[]>("/categories/"),
+  getCategories: (): Promise<Category[]> => cachedGet<Category[]>("/categories/", 60_000),
 
-  getAttributes: (): Promise<ProductAttributeType[]> => request<ProductAttributeType[]>("/attributes/"),
+  getAttributes: (): Promise<ProductAttributeType[]> =>
+    cachedGet<ProductAttributeType[]>("/attributes/", 60_000),
 
   getReviews: (page = 1): Promise<PaginatedResponse<Review>> =>
     request<PaginatedResponse<Review>>(`/reviews/?page=${page}`),
@@ -134,7 +148,9 @@ export const api = {
   getActivePopup: (): Promise<{ data: Popup | null; message?: string }> =>
     request<{ data: Popup | null; message?: string }>("/popups/active/"),
 
-  getSiteSettings: (): Promise<SiteSettings> => request<SiteSettings>("/site-settings/"),
+  getSiteSettings: (): Promise<SiteSettings> =>
+    cachedGet<SiteSettings>("/site-settings/", 60_000),
 
-  getDeliverySettings: (): Promise<DeliverySettings> => request<DeliverySettings>("/delivery-settings/"),
+  getDeliverySettings: (): Promise<DeliverySettings> =>
+    cachedGet<DeliverySettings>("/delivery-settings/", 60_000),
 };

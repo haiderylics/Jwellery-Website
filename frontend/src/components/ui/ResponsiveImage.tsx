@@ -42,7 +42,7 @@ export const ResponsiveImage: React.FC<ResponsiveImageProps> = ({
   const lrgSrc = image?.large_url;
   const altText =
     alt ||
-    ("alt_text" in (image || {}) ? (image as any).alt_text : "") ||
+    image?.alt_text ||
     "Fine Jewellery Piece";
 
   const displayFallbackText = (
@@ -79,6 +79,7 @@ export const ResponsiveImage: React.FC<ResponsiveImageProps> = ({
         sizes={sizes}
         alt={altText}
         loading={priority ? "eager" : "lazy"}
+        fetchPriority={priority ? "high" : "auto"}
         decoding="async"
         onError={() => setHasError(true)}
         className="responsive-img"

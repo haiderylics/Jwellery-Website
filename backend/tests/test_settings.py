@@ -1,4 +1,5 @@
 import importlib
+from pathlib import Path
 
 import pytest
 from django.core.exceptions import ImproperlyConfigured
@@ -104,6 +105,26 @@ def test_production_settings_loads_with_valid_config(monkeypatch: pytest.MonkeyP
     assert prod_settings.STORAGES["default"]["BACKEND"] == (
         "backend.apps.common.cloudinary_storage.CloudinaryMediaStorage"
     )
+    assert prod_settings.CACHES["default"]["BACKEND"] == (
+        "django.core.cache.backends.filebased.FileBasedCache"
+    )
+    cache_location = Path(prod_settings.CACHES["default"]["LOCATION"])
+    assert cache_location.is_absolute()
+    assert not cache_location.is_relative_to(Path(prod_settings.MEDIA_ROOT).resolve())
+    assert not cache_location.is_relative_to(Path(prod_settings.STATIC_ROOT).resolve())
+    assert prod_settings.CACHES["default"]["OPTIONS"]["MAX_ENTRIES"] == 1500
+
+
+def test_production_cache_location_rejects_relative_path(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("DJANGO_SECRET_KEY", "a" * 55)
+    monkeypatch.setenv("DJANGO_ALLOWED_HOSTS", "example.com")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/db")
+    monkeypatch.setenv("DJANGO_CACHE_LOCATION", "relative/cache")
+
+    with pytest.raises(ImproperlyConfigured, match="must be an absolute filesystem path"):
+        importlib.reload(importlib.import_module("backend.config.settings.production"))
 
 
 def test_production_settings_load_for_static_build_without_cloudinary_credentials(

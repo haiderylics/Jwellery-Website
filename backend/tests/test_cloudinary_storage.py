@@ -472,6 +472,31 @@ def test_product_admin_retains_existing_cloudinary_image_without_reopening(
 
 
 @pytest.mark.django_db
+def test_admin_read_hot_paths_make_no_cloudinary_admin_api_calls(
+    cloudinary_admin_product: tuple[Client, Product, ProductImage, CloudinaryMediaStorage, Mock],
+) -> None:
+    client, product, _product_image, storage, upload = cloudinary_admin_product
+    with (
+        patch.object(
+            storage,
+            "open",
+            side_effect=AssertionError("Admin read paths must not reopen Cloudinary media"),
+        ) as storage_open,
+        patch("cloudinary.api.resource") as resource,
+    ):
+        responses = [
+            client.get("/admin/"),
+            client.get("/admin/catalog/product/"),
+            client.get(f"/admin/catalog/product/{product.pk}/change/"),
+        ]
+
+    assert all(response.status_code == 200 for response in responses)
+    storage_open.assert_not_called()
+    resource.assert_not_called()
+    upload.assert_not_called()
+
+
+@pytest.mark.django_db
 def test_product_admin_replacement_validates_once_and_cleans_old_asset_after_commit(
     cloudinary_admin_product: tuple[Client, Product, ProductImage, CloudinaryMediaStorage, Mock],
     django_capture_on_commit_callbacks,

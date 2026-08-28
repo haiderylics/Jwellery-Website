@@ -579,3 +579,33 @@ bounded transformations, and deletes run after transaction commit against only t
 `normalize_cloudinary_media` classifies extensionful and reserved-namespace legacy assets,
 refuses target/source conflicts for manual review, and renames only an unambiguous DB-referenced
 source under explicit `--apply`. Railway and Netlify configuration are unchanged.
+
+DATE: 2026-08-28
+
+DECISION: Owner-Focused Native Django Admin and External Netlify Admin Entry Point
+
+REASON: The store owner needs a wide, accessible black/gold operations console without technical
+auth clutter, while Django's proven authentication and permission machinery must remain intact.
+
+IMPACT: A supported custom `AdminSite` hides the auth application and inline-only models from
+normal navigation, exposes User management as **Staff Access** only to superusers, and preserves
+direct permission checks. Django 6 native `details/summary` collapses, responsive form widths,
+compact inlines, a sticky save bar, a 1500px dashboard grid, and cached KPI aggregates replace the
+narrow/blue legacy presentation. Netlify copies `_redirects` into the Vite build so `/admin` and
+`/admin/*` issue 302 redirects to Railway before the SPA fallback; no admin proxy is introduced.
+
+DATE: 2026-08-28
+
+DECISION: Ephemeral File-Based Public Cache for the Single-Replica MVP
+
+REASON: The current Railway topology needs inexpensive request/DB reduction without adding Redis
+or treating cache state as durable business data.
+
+IMPACT: Production uses bounded Django `FileBasedCache` at `/tmp/ahs-jewellers-cache` by default,
+configurable with absolute `DJANGO_CACHE_LOCATION`. Homepage, site/delivery settings, taxonomy,
+scheduled promotions/popups, product detail, admin branding, and KPI aggregates have bounded TTLs
+and post-commit namespace/key invalidation. Promotion cache TTL never crosses its next schedule
+boundary. Public GETs use short browser caching/ETags; admin, health, sessions, CSRF, mutations,
+and errors are excluded. Horizontal scaling to multiple Django replicas is the explicit trigger
+to migrate to shared Redis/Memcached. The React client additionally deduplicates selected GET
+promises in a bounded 64-entry 30-60 second memory cache and never retains failures.

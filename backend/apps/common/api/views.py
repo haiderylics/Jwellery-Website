@@ -1,14 +1,20 @@
 """Aggregated storefront homepage view."""
 
+from django.conf import settings
 from django.core.cache import cache
 from django.db.models import Count, Q
-from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from backend.apps.catalog.api.serializers import CategorySerializer, ProductListSerializer
 from backend.apps.catalog.models import Category, Product
+from backend.apps.common.api.cache import (
+    public_response,
+    schedule_cache_timeout,
+    scheduled_cache_entry,
+    unpack_scheduled_cache_entry,
+)
 from backend.apps.common.cache_utils import CACHE_KEY_HOMEPAGE
 from backend.apps.content.api.serializers import (
     AboutSectionSerializer,
@@ -36,9 +42,12 @@ class StorefrontHomeView(APIView):
     http_method_names = ["get", "head", "options"]
 
     def get(self, request, *args, **kwargs) -> Response:
-        cached_payload = cache.get(CACHE_KEY_HOMEPAGE)
-        if cached_payload is not None:
-            return Response(cached_payload, status=status.HTTP_200_OK)
+        cached_entry = cache.get(CACHE_KEY_HOMEPAGE)
+        if cached_entry is not None:
+            cached_payload, browser_max_age = unpack_scheduled_cache_entry(
+                cached_entry, browser_max_age=30
+            )
+            return public_response(request, cached_payload, max_age=browser_max_age)
 
         # 1. Active Promotions & Announcement Bar
         promotions_qs = Promotion.objects.active_now().order_by("priority", "-created_at")
@@ -131,6 +140,14 @@ class StorefrontHomeView(APIView):
             "about": about_data,
         }
 
-        # Cache for 10 minutes (invalidated instantly on admin save/delete signals)
-        cache.set(CACHE_KEY_HOMEPAGE, payload, timeout=600)
-        return Response(payload, status=status.HTTP_200_OK)
+        timeout = schedule_cache_timeout(Promotion, Popup, configured_timeout=600)
+        cache.set(
+            CACHE_KEY_HOMEPAGE,
+            scheduled_cache_entry(payload, timeout),
+            timeout=timeout,
+        )
+        return public_response(
+            request,
+            payload,
+            max_age=min(30, getattr(settings, "PUBLIC_PRODUCT_CACHE_TIMEOUT", 60)),
+        )

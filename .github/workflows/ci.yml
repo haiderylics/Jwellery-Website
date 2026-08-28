@@ -75,6 +75,9 @@ jobs:
       - name: Frontend TypeScript Typecheck
         run: npm --prefix frontend run typecheck
 
+      - name: Frontend Request Cache Tests
+        run: npm --prefix frontend test
+
       - name: Frontend Production Bundle Build
         run: npm --prefix frontend run build
 

@@ -14,6 +14,16 @@
   min-height: 100vh;
   background-color: var(--color-obsidian);
   color: var(--color-warm-white);
+  overflow-x: clip;
+}
+
+:where(a, button, input, textarea, select, [tabindex]):focus-visible {
+  outline: 3px solid var(--color-light-gold);
+  outline-offset: 3px;
+}
+
+:where(h1, h2, h3, p, a, span) {
+  overflow-wrap: anywhere;
 }
 
 .storefront-main {
@@ -118,17 +128,20 @@
 .btn-sm {
   padding: 0.5rem 1rem;
   font-size: 0.75rem;
+  min-height: 40px;
 }
 
 .btn-md {
   padding: 0.75rem 1.5rem;
   font-size: 0.85rem;
+  min-height: 44px;
 }
 
 .btn-lg {
   padding: 1rem 2rem;
   font-size: 0.9rem;
   letter-spacing: 0.08em;
+  min-height: 48px;
 }
 
 .btn-primary {
@@ -2185,6 +2198,9 @@
   border-radius: 6px;
   overflow: hidden;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+  max-height: calc(100dvh - (2 * var(--gutter)));
+  display: flex;
+  flex-direction: column;
 }
 
 .modal-header {
@@ -2205,6 +2221,11 @@
   border: none;
   color: var(--color-muted);
   cursor: pointer;
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .modal-close-btn:hover {
@@ -2213,6 +2234,8 @@
 
 .modal-body {
   padding: var(--space-6);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 /* Popup specific */
@@ -2225,6 +2248,9 @@
   border-radius: 6px;
   overflow: hidden;
   box-shadow: 0 16px 48px rgba(201, 162, 39, 0.2);
+  max-height: calc(100dvh - (2 * var(--gutter)));
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .popup-close-btn {
@@ -2234,8 +2260,8 @@
   background-color: rgba(0, 0, 0, 0.6);
   border: none;
   color: var(--color-warm-white);
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -2944,5 +2970,4 @@
   gap: var(--space-4);
   justify-content: center;
 }
-
 

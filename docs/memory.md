@@ -560,3 +560,22 @@ A smaller secure, fast and maintainable product that looks premium is better tha
   `CLOUDINARY_*` Railway variables. Development continues to use local filesystem media.
 - Product, gallery, review, about, promotion, popup, and product-video fields retain their
   existing Django field schema; no production data migration is needed.
+
+DATE: 2026-08-28
+
+DECISION: Canonical Cloudinary Media Identity
+
+REASON: Django storage names must remain useful extension-bearing keys, while Cloudinary image
+and video public IDs must be extensionless to avoid broken double-extension delivery URLs.
+
+IMPACT: One backend identity mapper now separates storage name, extensionless public ID, format,
+and resource type for upload, URL generation, lookup, size, destroy, replacement cleanup, and
+DB-bounded audit tooling. Existing DB keys remain unchanged, while product image/video identities
+map from `products/images` and `products/videos` to the Cloudinary-safe
+`catalog/products/photos` and `catalog/products/clips` namespaces. Exact reserved `images` and
+`videos` public-ID path elements and other documented ambiguous path patterns are rejected.
+SDK-generated secure URLs omit invented versions, responsive URLs are backend-authoritative
+bounded transformations, and deletes run after transaction commit against only the canonical ID.
+`normalize_cloudinary_media` classifies extensionful and reserved-namespace legacy assets,
+refuses target/source conflicts for manual review, and renames only an unambiguous DB-referenced
+source under explicit `--apply`. Railway and Netlify configuration are unchanged.

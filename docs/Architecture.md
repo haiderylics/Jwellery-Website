@@ -33,6 +33,29 @@ default storage with server-only Railway credentials. WhiteNoise serves only col
 static files. Cloudinary's CDN provides the fixed responsive image delivery variants; the
 application does not persist duplicate thumbnail files in production.
 
+### Canonical Cloudinary Media Identity
+
+- Django keeps its backward-compatible extension-bearing keys, such as
+  `products/images/2026/08/<uuid>.png` and `products/videos/2026/08/<uuid>.mp4`; no field or data
+  migration is required.
+- The identity mapper rewrites those keys to Cloudinary-safe public IDs:
+  `catalog/products/photos/2026/08/<uuid>` for images and
+  `catalog/products/clips/2026/08/<uuid>` for videos. The format remains separate. Exact
+  `images`/`videos` path elements, version-like `v<digits>` folders, and transformation-like
+  short underscore prefixes are not allowed in generated public-ID paths.
+- Upload, original URL, responsive URL, lookup, size, delete, replacement cleanup, and audit
+  tooling all use the same canonical mapping. Backslashes never enter a Cloudinary public ID.
+- Delivery URLs come from the official SDK with secure `upload` delivery. UUID asset names omit
+  invented versions; 300/800/1600 variants use bounded `c_limit`, `q_auto`, and `f_auto`
+  transformations and are generated on demand rather than stored eagerly.
+- The frontend consumes backend-provided URLs without reconstructing Cloudinary paths.
+- Replacement and deletion remain post-commit operations and always target the one safe canonical
+  public ID; runtime deletion never probes or destroys speculative legacy IDs.
+- The dry-run-by-default `normalize_cloudinary_media` command checks only database-referenced
+  assets. It reports `CANONICAL`, `LEGACY_EXTENSIONFUL`, `LEGACY_RESERVED_NAMESPACE`, `MISSING`,
+  or `CONFLICT`. A conflict is never overwritten and exits for manual review; only explicit
+  `--apply` can rename a single unambiguous legacy source.
+
 ---
 
 ## 2. Recommended Stack

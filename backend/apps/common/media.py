@@ -33,6 +33,12 @@ MAX_VIDEO_SIZE_BYTES = 50 * 1024 * 1024  # 50 MB
 
 ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".avif"}
 ALLOWED_IMAGE_FORMATS = {"JPEG", "PNG", "WEBP", "AVIF"}
+IMAGE_FORMAT_EXTENSIONS = {
+    "JPEG": {".jpg", ".jpeg"},
+    "PNG": {".png"},
+    "WEBP": {".webp"},
+    "AVIF": {".avif"},
+}
 
 ALLOWED_VIDEO_EXTENSIONS = {".mp4", ".webm", ".mov"}
 
@@ -51,6 +57,11 @@ IMAGE_VARIANTS = {
 }
 
 
+def _is_committed_field_file(file_obj: Any) -> bool:
+    """Return before any remote FieldFile property can trigger a storage lookup."""
+    return isinstance(file_obj, FieldFile) and file_obj._committed
+
+
 def validate_secure_image(file_obj: Any) -> None:
     """Validate uploaded image file for size, format, dimensions, and decompression safety."""
     if not file_obj:
@@ -62,14 +73,14 @@ def validate_secure_image(file_obj: Any) -> None:
     # upload; parsing it would call storage.open() and download remote media.
     # Newly assigned uploads are wrapped as FieldFile with _committed=False,
     # while InMemory/Temporary/SimpleUploadedFile instances reach us directly.
-    if isinstance(file_obj, FieldFile) and file_obj._committed:
+    if _is_committed_field_file(file_obj):
         return
 
     filename = getattr(file_obj, "name", "unknown")
     size = getattr(file_obj, "size", 0)
 
     # 1. File size check
-    if hasattr(file_obj, "size") and file_obj.size > MAX_IMAGE_SIZE_BYTES:
+    if size > MAX_IMAGE_SIZE_BYTES:
         log_security_event(
             "security.upload_rejected",
             reason="file_size_exceeded",
@@ -78,7 +89,7 @@ def validate_secure_image(file_obj: Any) -> None:
             max_bytes=MAX_IMAGE_SIZE_BYTES,
         )
         raise ValidationError(
-            f"Image file size exceeds the 10 MB limit (got {file_obj.size / (1024 * 1024):.1f} MB)."
+            f"Image file size exceeds the 10 MB limit (got {size / (1024 * 1024):.1f} MB)."
         )
 
     # 2. Extension check
@@ -113,6 +124,16 @@ def validate_secure_image(file_obj: Any) -> None:
             raise ValidationError(
                 f"Invalid or corrupted image content. Detected format: '{img_format}' is not permitted."
             )
+
+        if ext not in IMAGE_FORMAT_EXTENSIONS[img_format.upper()]:
+            log_security_event(
+                "security.upload_rejected",
+                reason="extension_content_mismatch",
+                filename=Path(filename).name,
+                extension=ext,
+                detected_format=img_format,
+            )
+            raise ValidationError("Image filename extension does not match its decoded format.")
 
         width, height = img.size
         if width > MAX_IMAGE_WIDTH or height > MAX_IMAGE_HEIGHT:
@@ -206,10 +227,13 @@ def validate_secure_video(file_obj: Any) -> None:
     if not file_obj:
         return
 
+    if _is_committed_field_file(file_obj):
+        return
+
     filename = getattr(file_obj, "name", "unknown")
     size = getattr(file_obj, "size", 0)
 
-    if hasattr(file_obj, "size") and file_obj.size > MAX_VIDEO_SIZE_BYTES:
+    if size > MAX_VIDEO_SIZE_BYTES:
         log_security_event(
             "security.upload_rejected",
             reason="video_size_exceeded",
@@ -218,7 +242,7 @@ def validate_secure_video(file_obj: Any) -> None:
             max_bytes=MAX_VIDEO_SIZE_BYTES,
         )
         raise ValidationError(
-            f"Video file size exceeds the 50 MB limit (got {file_obj.size / (1024 * 1024):.1f} MB)."
+            f"Video file size exceeds the 50 MB limit (got {size / (1024 * 1024):.1f} MB)."
         )
 
     ext = Path(filename).suffix.lower()
@@ -340,11 +364,13 @@ def cleanup_storage_media(storage_file_path: str) -> None:
     if not storage_file_path:
         return
 
-    try:
-        if getattr(default_storage, "is_cloudinary_storage", False):
-            default_storage.delete(storage_file_path)
-            return
+    if getattr(default_storage, "is_cloudinary_storage", False):
+        # CloudinaryMediaStorage logs and raises unexpected API/transport
+        # failures. Do not turn a failed remote destroy into apparent success.
+        default_storage.delete(storage_file_path)
+        return
 
+    try:
         # Delete variants
         for variant_name in IMAGE_VARIANTS.keys():
             var_path = get_variant_path(storage_file_path, variant_name)

@@ -1,21 +1,30 @@
 """Unit coverage for the official Cloudinary-backed production storage."""
 
 from io import BytesIO
+from pathlib import Path, PurePosixPath
 from unittest.mock import Mock, patch
 
+import cloudinary.api
 import cloudinary.uploader
 import pytest
+from cloudinary.exceptions import NotFound
 from django.contrib.auth import get_user_model
 from django.core.checks import run_checks
 from django.core.exceptions import ImproperlyConfigured
 from django.core.files.storage import default_storage, storages
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import transaction
 from django.test import Client, override_settings
 from PIL import Image
 
 from backend.apps.catalog.api.serializers import ProductImageSerializer
 from backend.apps.catalog.models import Category, Product, ProductImage
-from backend.apps.common.cloudinary_storage import CloudinaryMediaStorage
+from backend.apps.common.cloudinary_storage import (
+    CloudinaryMediaStorage,
+    CloudinaryStorageError,
+    cloudinary_asset_identity,
+    cloudinary_transformed_url,
+)
 
 
 def _image_upload(name: str = "ring.png", *, valid: bool = True) -> SimpleUploadedFile:
@@ -25,6 +34,21 @@ def _image_upload(name: str = "ring.png", *, valid: bool = True) -> SimpleUpload
     image_buffer = BytesIO()
     Image.new("RGB", (20, 20), color="gold").save(image_buffer, format="PNG")
     return SimpleUploadedFile(name, image_buffer.getvalue(), content_type="image/png")
+
+
+def _successful_upload_response(file_obj, **options):
+    asset_format = Path(file_obj.name).suffix.lower().lstrip(".")
+    if asset_format == "jpeg":
+        asset_format = "jpg"
+    return {
+        "public_id": options["public_id"],
+        "resource_type": options["resource_type"],
+        "format": asset_format,
+        "secure_url": (
+            f"https://res.cloudinary.com/test-cloud/{options['resource_type']}/upload/"
+            f"{options['public_id']}.{asset_format}"
+        ),
+    }
 
 
 def _product_change_data(product: Product, product_image: ProductImage) -> dict[str, object]:
@@ -75,7 +99,7 @@ def cloudinary_admin_product(
     )
     monkeypatch.setitem(storages._storages, "default", storage)
     monkeypatch.setattr(default_storage, "_wrapped", storage)
-    upload = Mock()
+    upload = Mock(side_effect=_successful_upload_response)
     monkeypatch.setattr(cloudinary.uploader, "upload", upload)
 
     category = Category.objects.create(name="Admin Rings", slug="admin-rings")
@@ -106,20 +130,101 @@ def test_cloudinary_storage_uploads_server_generated_key_and_returns_https_url()
     Image.new("RGB", (20, 20), color="gold").save(image_buffer, format="PNG")
     content = SimpleUploadedFile("source.png", image_buffer.getvalue(), content_type="image/png")
 
-    with (
-        patch("cloudinary.uploader.upload") as upload,
-        patch(
-            "cloudinary.utils.cloudinary_url",
-            return_value=("https://res.cloudinary.com/test/image", {}),
-        ),
-    ):
-        name = storage._save("products/images/2026/08/uuid.jpg", content)
+    with patch("cloudinary.uploader.upload", side_effect=_successful_upload_response) as upload:
+        name = storage._save("products/images/2026/08/uuid.png", content)
         url = storage.url(name)
 
-    assert name == "products/images/2026/08/uuid.jpg"
+    assert name == "products/images/2026/08/uuid.png"
+    upload.assert_called_once()
     assert upload.call_args.kwargs["resource_type"] == "image"
-    assert upload.call_args.kwargs["public_id"] == name
-    assert url.startswith("https://")
+    assert upload.call_args.kwargs["type"] == "upload"
+    assert upload.call_args.kwargs["public_id"] == "catalog/products/photos/2026/08/uuid"
+    assert PurePosixPath(upload.call_args.kwargs["public_id"]).suffix == ""
+    assert url == (
+        "https://res.cloudinary.com/test-cloud/image/upload/"
+        "catalog/products/photos/2026/08/uuid.png"
+    )
+    assert ".png.png" not in url
+    assert "/v1/" not in url
+
+
+def test_cloudinary_asset_identity_is_posix_extensionless_and_format_aware() -> None:
+    image = cloudinary_asset_identity(r"products\images\2026\08\abc.jpeg")
+    video = cloudinary_asset_identity("products/videos/2026/08/demo.mp4")
+    future_image = cloudinary_asset_identity("catalog/products/photos/2026/08/future.webp")
+    future_video = cloudinary_asset_identity("catalog/products/clips/2026/08/future.webm")
+
+    assert image.storage_name == "products/images/2026/08/abc.jpeg"
+    assert image.public_id == "catalog/products/photos/2026/08/abc"
+    assert image.format == "jpg"
+    assert image.resource_type == "image"
+    assert image.legacy_extensionful_public_id == "products/images/2026/08/abc.jpeg"
+    assert image.legacy_reserved_namespace_public_id == "products/images/2026/08/abc"
+    assert video.public_id == "catalog/products/clips/2026/08/demo"
+    assert video.format == "mp4"
+    assert video.resource_type == "video"
+    assert video.legacy_reserved_namespace_public_id == "products/videos/2026/08/demo"
+    assert future_image.public_id == "catalog/products/photos/2026/08/future"
+    assert future_image.legacy_reserved_namespace_public_id is None
+    assert future_video.public_id == "catalog/products/clips/2026/08/future"
+    assert future_video.resource_type == "video"
+    for identity in (image, video, future_image, future_video):
+        assert "images" not in PurePosixPath(identity.public_id).parts
+        assert "videos" not in PurePosixPath(identity.public_id).parts
+        assert PurePosixPath(identity.public_id).suffix == ""
+
+
+@pytest.mark.parametrize(
+    "name, message",
+    [
+        ("campaign/images/2026/08/abc.png", "reserved"),
+        ("campaign/videos/2026/08/abc.mp4", "reserved"),
+        ("catalog/v123/photos/abc.png", "version-like"),
+        ("ab_variant/photos/abc.png", "transformation-like"),
+    ],
+)
+def test_cloudinary_asset_identity_rejects_unsafe_future_paths(name: str, message: str) -> None:
+    with pytest.raises(ValueError, match=message):
+        cloudinary_asset_identity(name)
+
+
+def test_cloudinary_transformed_urls_share_canonical_public_id() -> None:
+    storage = CloudinaryMediaStorage(
+        cloud_name="test-cloud", api_key="test-key", api_secret="test-secret"
+    )
+    name = "products/images/2026/08/abc.png"
+
+    original = storage.url(name)
+    transformed = cloudinary_transformed_url(name, 1600)
+
+    assert original.endswith("/catalog/products/photos/2026/08/abc.png")
+    assert transformed.endswith("/catalog/products/photos/2026/08/abc.png")
+    assert "c_limit,f_auto,q_auto,w_1600" in transformed
+    assert ".png.png" not in original + transformed
+    assert "/v1/" not in original + transformed
+
+    with pytest.raises(ValueError, match="cannot be applied to video"):
+        cloudinary_transformed_url("products/videos/2026/08/demo.mp4", 800)
+
+
+def test_cloudinary_upload_rejects_mismatched_response_identity() -> None:
+    storage = CloudinaryMediaStorage(
+        cloud_name="test-cloud", api_key="test-key", api_secret="test-secret"
+    )
+
+    with (
+        patch(
+            "cloudinary.uploader.upload",
+            return_value={
+                "public_id": "wrong/id",
+                "resource_type": "image",
+                "format": "png",
+                "secure_url": "https://res.cloudinary.com/test-cloud/image/upload/wrong.png",
+            },
+        ),
+        pytest.raises(CloudinaryStorageError, match="did not match"),
+    ):
+        storage._save("products/images/2026/08/abc.png", _image_upload())
 
 
 def test_corrupt_image_is_rejected_before_cloudinary_upload() -> None:
@@ -145,13 +250,88 @@ def test_cloudinary_storage_uses_video_resource_type_and_deletes_with_invalidati
     )
     name = "products/videos/2026/08/uuid.mp4"
 
-    with patch("cloudinary.uploader.destroy") as destroy:
+    with patch("cloudinary.uploader.destroy", return_value={"result": "ok"}) as destroy:
         storage.delete(name)
 
-    assert destroy.call_args.kwargs == {
-        "resource_type": "video",
-        "invalidate": True,
-    }
+    destroy.assert_called_once_with(
+        "catalog/products/clips/2026/08/uuid",
+        resource_type="video",
+        type="upload",
+        invalidate=True,
+    )
+
+
+def test_cloudinary_video_upload_uses_extensionless_public_id_once() -> None:
+    storage = CloudinaryMediaStorage(
+        cloud_name="test-cloud", api_key="test-key", api_secret="test-secret"
+    )
+    content = SimpleUploadedFile("demo.mp4", b"\x00\x00\x00 ftypisom", content_type="video/mp4")
+
+    with patch("cloudinary.uploader.upload", side_effect=_successful_upload_response) as upload:
+        name = storage._save("products/videos/2026/08/uuid.mp4", content)
+
+    assert name == "products/videos/2026/08/uuid.mp4"
+    upload.assert_called_once()
+    assert upload.call_args.kwargs["public_id"] == "catalog/products/clips/2026/08/uuid"
+    assert PurePosixPath(upload.call_args.kwargs["public_id"]).suffix == ""
+    assert upload.call_args.kwargs["resource_type"] == "video"
+    assert upload.call_args.kwargs["type"] == "upload"
+
+
+def test_cloudinary_delete_not_found_is_idempotent() -> None:
+    storage = CloudinaryMediaStorage(
+        cloud_name="test-cloud", api_key="test-key", api_secret="test-secret"
+    )
+    with patch("cloudinary.uploader.destroy", return_value={"result": "not found"}) as destroy:
+        storage.delete("products/images/2026/08/missing.png")
+
+    destroy.assert_called_once_with(
+        "catalog/products/photos/2026/08/missing",
+        resource_type="image",
+        type="upload",
+        invalidate=True,
+    )
+
+
+def test_cloudinary_delete_surfaces_unconfirmed_response() -> None:
+    storage = CloudinaryMediaStorage(
+        cloud_name="test-cloud", api_key="test-key", api_secret="test-secret"
+    )
+    with (
+        patch("cloudinary.uploader.destroy", return_value={"result": "error"}),
+        pytest.raises(CloudinaryStorageError, match="did not confirm deletion"),
+    ):
+        storage.delete("products/images/2026/08/abc.png")
+
+
+def test_cloudinary_exists_and_size_lookup_extensionless_identity() -> None:
+    storage = CloudinaryMediaStorage(
+        cloud_name="test-cloud", api_key="test-key", api_secret="test-secret"
+    )
+    name = "products/images/2026/08/abc.png"
+
+    with patch("cloudinary.api.resource", return_value={"bytes": 321}) as resource:
+        assert storage.exists(name) is True
+        assert storage.size(name) == 321
+
+    assert resource.call_count == 2
+    resource.assert_called_with(
+        "catalog/products/photos/2026/08/abc",
+        resource_type="image",
+        type="upload",
+    )
+
+
+def test_cloudinary_exists_and_size_handle_not_found_without_leaking_sdk_error() -> None:
+    storage = CloudinaryMediaStorage(
+        cloud_name="test-cloud", api_key="test-key", api_secret="test-secret"
+    )
+    name = "products/images/2026/08/missing.png"
+
+    with patch("cloudinary.api.resource", side_effect=NotFound("remote detail")):
+        assert storage.exists(name) is False
+        with pytest.raises(FileNotFoundError, match="products/images/2026/08/missing.png"):
+            storage.size(name)
 
 
 def test_cloudinary_storage_fails_without_credentials_instead_of_using_local_media() -> None:
@@ -209,16 +389,15 @@ def test_product_image_uses_django_default_storage_and_cloudinary_url(
         name="Cloudinary Ring", slug="cloudinary-ring", category=category, base_price=1000
     )
     with (
-        patch("cloudinary.uploader.upload") as cloudinary_upload,
+        patch(
+            "cloudinary.uploader.upload", side_effect=_successful_upload_response
+        ) as cloudinary_upload,
+        patch("cloudinary.api.resource") as cloudinary_resource,
         patch("backend.apps.common.signals.generate_image_variants") as generate_variants,
         patch.object(
             CloudinaryMediaStorage,
             "open",
             side_effect=AssertionError("Cloudinary media must not be reopened after upload"),
-        ),
-        patch(
-            "cloudinary.utils.cloudinary_url",
-            return_value=("https://res.cloudinary.com/test-cloud/image/upload/ring.jpg", {}),
         ),
     ):
         product_image = ProductImage.objects.create(product=product, image=upload_file)
@@ -226,11 +405,28 @@ def test_product_image_uses_django_default_storage_and_cloudinary_url(
 
     assert product_image.image.name.startswith("products/images/")
     assert cloudinary_upload.call_count == 1
+    cloudinary_resource.assert_not_called()
     generate_variants.assert_not_called()
     assert payload["image_url"].startswith("https://res.cloudinary.com/")
     assert payload["thumbnail_url"].startswith("https://res.cloudinary.com/")
     assert payload["medium_url"].startswith("https://res.cloudinary.com/")
     assert payload["large_url"].startswith("https://res.cloudinary.com/")
+    assert "c_limit,f_auto,q_auto,w_300" in payload["thumbnail_url"]
+    assert "c_limit,f_auto,q_auto,w_800" in payload["medium_url"]
+    assert "c_limit,f_auto,q_auto,w_1600" in payload["large_url"]
+    for url in (
+        payload["image_url"],
+        payload["thumbnail_url"],
+        payload["medium_url"],
+        payload["large_url"],
+    ):
+        assert "/catalog/products/photos/" in url
+        assert "/images/" not in url
+        assert "/videos/" not in url
+        assert ".jpg.jpg" not in url
+        assert "/v1/" not in url
+        assert "/media/" not in url
+        assert url.startswith("https://")
     assert "test-key" not in str(payload)
     assert "test-secret" not in str(payload)
 
@@ -242,11 +438,19 @@ def test_product_admin_retains_existing_cloudinary_image_without_reopening(
     client, product, product_image, storage, upload = cloudinary_admin_product
     url = f"/admin/catalog/product/{product.pk}/change/"
 
-    with patch.object(
-        storage,
-        "open",
-        side_effect=AssertionError("An unchanged Cloudinary image must not be reopened"),
-    ) as storage_open:
+    with (
+        patch.object(
+            storage,
+            "open",
+            side_effect=AssertionError("An unchanged Cloudinary image must not be reopened"),
+        ) as storage_open,
+        patch.object(
+            storage,
+            "size",
+            side_effect=AssertionError("An unchanged Cloudinary image must not fetch size"),
+        ) as storage_size,
+        patch("cloudinary.api.resource") as resource,
+    ):
         get_response = client.get(url)
         post_data = _product_change_data(product, product_image)
         post_data["name"] = "Admin Cloudinary Ring Updated"
@@ -262,6 +466,8 @@ def test_product_admin_retains_existing_cloudinary_image_without_reopening(
     assert product.name == "Admin Cloudinary Ring Updated"
     assert product_image.image.name.startswith("products/images/")
     storage_open.assert_not_called()
+    storage_size.assert_not_called()
+    resource.assert_not_called()
     upload.assert_not_called()
 
 
@@ -281,7 +487,7 @@ def test_product_admin_replacement_validates_once_and_cleans_old_asset_after_com
             "open",
             side_effect=AssertionError("A new upload must be validated from its incoming stream"),
         ) as storage_open,
-        patch("cloudinary.uploader.destroy") as destroy,
+        patch("cloudinary.uploader.destroy", return_value={"result": "ok"}) as destroy,
         django_capture_on_commit_callbacks(execute=True),
     ):
         response = client.post(
@@ -298,7 +504,13 @@ def test_product_admin_replacement_validates_once_and_cleans_old_asset_after_com
     assert product_image.image.name.startswith("products/images/")
     upload.assert_called_once()
     storage_open.assert_not_called()
-    destroy.assert_called_once_with(old_name, resource_type="image", invalidate=True)
+    old_identity = cloudinary_asset_identity(old_name)
+    destroy.assert_called_once_with(
+        old_identity.public_id,
+        resource_type="image",
+        type="upload",
+        invalidate=True,
+    )
 
 
 @pytest.mark.django_db
@@ -326,3 +538,25 @@ def test_product_admin_rejects_corrupt_replacement_before_cloudinary_upload(
     assert product_image.image.name == old_name
     upload.assert_not_called()
     storage_open.assert_not_called()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_product_image_replacement_rollback_never_deletes_old_cloudinary_asset(
+    cloudinary_admin_product: tuple[Client, Product, ProductImage, CloudinaryMediaStorage, Mock],
+) -> None:
+    _client, _product, product_image, _storage, upload = cloudinary_admin_product
+    old_name = product_image.image.name
+
+    with (
+        patch("cloudinary.uploader.destroy", return_value={"result": "ok"}) as destroy,
+        pytest.raises(RuntimeError, match="force rollback"),
+    ):
+        with transaction.atomic():
+            product_image.image = _image_upload("replacement.png")
+            product_image.save()
+            raise RuntimeError("force rollback")
+
+    product_image.refresh_from_db()
+    assert product_image.image.name == old_name
+    upload.assert_called_once()
+    destroy.assert_not_called()

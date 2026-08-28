@@ -3,11 +3,13 @@
 import io
 from decimal import Decimal
 from pathlib import Path
+from unittest.mock import Mock
 
 import pytest
 from django.core.exceptions import ValidationError
 from django.core.files.storage import default_storage
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db.models.fields.files import FieldFile
 from PIL import Image
 
 from backend.apps.catalog.api.serializers import ProductImageSerializer
@@ -37,6 +39,22 @@ def create_test_image_file(
     return SimpleUploadedFile(name, buf.getvalue(), content_type=f"image/{format.lower()}")
 
 
+class ExplodingCommittedFieldFile(FieldFile):
+    """A remote reference that fails the test if validation touches storage-backed size."""
+
+    @property
+    def size(self):
+        raise AssertionError("Committed FieldFile.size must not be accessed")
+
+
+def committed_remote_field_file(name: str) -> FieldFile:
+    field = Mock()
+    field.storage = Mock()
+    value = ExplodingCommittedFieldFile(Mock(), field, name)
+    value._committed = True
+    return value
+
+
 @pytest.mark.django_db
 class TestImageValidation:
     """Verify security validation, format allowlisting, and dimension bounds."""
@@ -46,6 +64,9 @@ class TestImageValidation:
             upload = create_test_image_file(name=f"valid.{ext}", format=fmt)
             # Should not raise
             validate_secure_image(upload)
+
+    def test_committed_remote_field_file_returns_before_size_access(self):
+        validate_secure_image(committed_remote_field_file("products/images/existing.png"))
 
     def test_disallowed_extension_rejected(self):
         upload = SimpleUploadedFile(
@@ -72,6 +93,11 @@ class TestImageValidation:
             validate_secure_image(upload)
         assert "Corrupted or malicious image" in str(exc.value)
 
+    def test_filename_extension_must_match_decoded_image_format(self):
+        upload = create_test_image_file(name="mismatch.jpg", format="PNG")
+        with pytest.raises(ValidationError, match="extension does not match"):
+            validate_secure_image(upload)
+
     def test_oversized_image_rejected(self):
         # Fake file with size exceeding 10 MB
         class FakeHugeFile:
@@ -97,6 +123,9 @@ class TestVideoValidation:
     def test_valid_mp4_video_accepted(self):
         upload = SimpleUploadedFile("demo.mp4", b"\x00\x00\x00 ftypisom", content_type="video/mp4")
         validate_secure_video(upload)
+
+    def test_committed_remote_video_returns_before_size_access(self):
+        validate_secure_video(committed_remote_field_file("products/videos/existing.mp4"))
 
     def test_disallowed_video_extension_rejected(self):
         upload = SimpleUploadedFile("demo.avi", b"RIFF....AVI ", content_type="video/x-msvideo")

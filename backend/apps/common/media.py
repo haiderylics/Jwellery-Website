@@ -18,6 +18,7 @@ from typing import Any
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
+from django.db.models.fields.files import FieldFile
 from django.utils import timezone
 from django.utils.deconstruct import deconstructible
 from PIL import Image, ImageOps
@@ -53,6 +54,15 @@ IMAGE_VARIANTS = {
 def validate_secure_image(file_obj: Any) -> None:
     """Validate uploaded image file for size, format, dimensions, and decompression safety."""
     if not file_obj:
+        return
+
+    # ModelForm._post_clean() calls Model.full_clean(), which runs model-field
+    # validators even when an admin form retained an unchanged initial file.
+    # A committed FieldFile is a storage reference, not a newly supplied
+    # upload; parsing it would call storage.open() and download remote media.
+    # Newly assigned uploads are wrapped as FieldFile with _committed=False,
+    # while InMemory/Temporary/SimpleUploadedFile instances reach us directly.
+    if isinstance(file_obj, FieldFile) and file_obj._committed:
         return
 
     filename = getattr(file_obj, "name", "unknown")
